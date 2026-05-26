@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+
+# Entornos y secretos
+.env
+.env.*
+!.env.example
+*.key
+credentials.json
+secrets.toml
+.streamlit/secrets.toml
+
+# Datos (no versionar PDFs ni dumps; van a R2/Postgres)
+data/
+*.csv
+*.parquet
+*.pdf
+*.xlsx
+*.db
+*.sqlite
+
+# dbt
+dbt/target/
+dbt/dbt_packages/
+dbt/logs/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Herramientas
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store

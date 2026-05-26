@@ -1,0 +1,68 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "observatorio-precios"
+version = "0.1.0"
+description = "Observatorio diario de precios de alimentos y su impacto en la canasta básica en Perú"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+# Dependencias compartidas por todos los componentes
+dependencies = [
+    "pandas>=2.2",
+    "psycopg[binary]>=3.1",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+# Scrapers / pipeline de ingesta
+ingesta = [
+    "requests>=2.31",
+    "beautifulsoup4>=4.12",
+    "lxml>=5.0",
+    "tabula-py>=2.9",
+]
+# Transformaciones SQL
+dbt = [
+    "dbt-postgres>=1.8",
+]
+# Modelado y análisis
+ml = [
+    "prophet>=1.1",
+    "duckdb>=1.0",
+    "scikit-learn>=1.5",
+    "statsmodels>=0.14",
+]
+# Dashboard público
+dashboard = [
+    "streamlit>=1.36",
+    "plotly>=5.22",
+    "folium>=0.17",
+]
+# API REST
+api = [
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.30",
+]
+# Herramientas de desarrollo
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.5",
+    "mypy>=1.10",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["observatorio"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
