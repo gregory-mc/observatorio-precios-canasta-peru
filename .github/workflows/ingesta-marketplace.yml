@@ -1,0 +1,36 @@
+name: Ingesta Marketplace
+
+on:
+  schedule:
+    - cron: "0 9 * * *" # 04:00 America/Lima (UTC-5)
+  workflow_dispatch: {} # permite dispararlo a mano desde la pestaña Actions
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Instalar dependencias de ingesta
+        run: pip install -e ".[ingesta]"
+
+      - name: Scrapear precios de Marketplace
+        run: python -m observatorio.ingesta.marketplace.scrape --salida data/bronze
+
+      - name: Guardar snapshot como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: marketplace-${{ github.run_id }}
+          path: data/bronze/marketplace/
+          retention-days: 14
+
+      # TODO(S2): subir raw/<fecha>.json a Cloudflare R2 (bronze inmutable)
+      #           y cargar el CSV a Supabase Postgres (schema bronze).
+      # TODO(S2): alerta "sin inserciones hoy". Hoy el job falla si scrape.py
+      #           devuelve exit 1 (0 filas), y GitHub notifica el fallo por email.

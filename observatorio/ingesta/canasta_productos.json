@@ -1,0 +1,1664 @@
+[
+  {
+    "producto_codigo": "1001",
+    "producto": "Aceite",
+    "variedad_codigo": "100113",
+    "variedad": "Aceite alsol de 18 lt."
+  },
+  {
+    "producto_codigo": "1001",
+    "producto": "Aceite",
+    "variedad_codigo": "100135",
+    "variedad": "Aceite clasico botella tottus"
+  },
+  {
+    "producto_codigo": "1001",
+    "producto": "Aceite",
+    "variedad_codigo": "100130",
+    "variedad": "Aceite clásico botella x 1l"
+  },
+  {
+    "producto_codigo": "1001",
+    "producto": "Aceite",
+    "variedad_codigo": "100138",
+    "variedad": "Aceite clásico botella 12 x 900 ml"
+  },
+  {
+    "producto_codigo": "1001",
+    "producto": "Aceite",
+    "variedad_codigo": "100136",
+    "variedad": "Aceite clásico botella 900 ml"
+  },
+  {
+    "producto_codigo": "1001",
+    "producto": "Aceite",
+    "variedad_codigo": "100119",
+    "variedad": "Aceite cocinero 12 x 1 lt."
+  },
+  {
+    "producto_codigo": "1001",
+    "producto": "Aceite",
+    "variedad_codigo": "100137",
+    "variedad": "Aceite cocinero 12 x 900 ml"
+  },
+  {
+    "producto_codigo": "1018",
+    "producto": "Aceituna botija",
+    "variedad_codigo": "101801",
+    "variedad": "Aceituna negra botija"
+  },
+  {
+    "producto_codigo": "0202",
+    "producto": "Aji fresco",
+    "variedad_codigo": "020202",
+    "variedad": "Aji escabeche"
+  },
+  {
+    "producto_codigo": "0202",
+    "producto": "Aji fresco",
+    "variedad_codigo": "020207",
+    "variedad": "Aji montaña"
+  },
+  {
+    "producto_codigo": "0202",
+    "producto": "Aji fresco",
+    "variedad_codigo": "020208",
+    "variedad": "Aji naucho o miskuchi"
+  },
+  {
+    "producto_codigo": "0202",
+    "producto": "Aji fresco",
+    "variedad_codigo": "020209",
+    "variedad": "Aji rocoto"
+  },
+  {
+    "producto_codigo": "0203",
+    "producto": "Aji seco",
+    "variedad_codigo": "020301",
+    "variedad": "Aji amarillo seco"
+  },
+  {
+    "producto_codigo": "0203",
+    "producto": "Aji seco",
+    "variedad_codigo": "020302",
+    "variedad": "Aji mirasol"
+  },
+  {
+    "producto_codigo": "0203",
+    "producto": "Aji seco",
+    "variedad_codigo": "020304",
+    "variedad": "Aji panca"
+  },
+  {
+    "producto_codigo": "0203",
+    "producto": "Aji seco",
+    "variedad_codigo": "020303",
+    "variedad": "Aji paprika"
+  },
+  {
+    "producto_codigo": "0204",
+    "producto": "Ajo",
+    "variedad_codigo": "020402",
+    "variedad": "Ajo criollo o napuri"
+  },
+  {
+    "producto_codigo": "0204",
+    "producto": "Ajo",
+    "variedad_codigo": "020403",
+    "variedad": "Ajo morado"
+  },
+  {
+    "producto_codigo": "0206",
+    "producto": "Alcachofa",
+    "variedad_codigo": "020602",
+    "variedad": "Alcachofa"
+  },
+  {
+    "producto_codigo": "0207",
+    "producto": "Apio",
+    "variedad_codigo": "020701",
+    "variedad": "Apio"
+  },
+  {
+    "producto_codigo": "0401",
+    "producto": "Arroz",
+    "variedad_codigo": "040101",
+    "variedad": "Arroz corriente"
+  },
+  {
+    "producto_codigo": "0401",
+    "producto": "Arroz",
+    "variedad_codigo": "040131",
+    "variedad": "Arroz costeño graneadito 20 unid. x"
+  },
+  {
+    "producto_codigo": "0401",
+    "producto": "Arroz",
+    "variedad_codigo": "040103",
+    "variedad": "Arroz extra"
+  },
+  {
+    "producto_codigo": "0401",
+    "producto": "Arroz",
+    "variedad_codigo": "040141",
+    "variedad": "Arroz importado"
+  },
+  {
+    "producto_codigo": "0401",
+    "producto": "Arroz",
+    "variedad_codigo": "040130",
+    "variedad": "Arroz importado americano"
+  },
+  {
+    "producto_codigo": "0401",
+    "producto": "Arroz",
+    "variedad_codigo": "040104",
+    "variedad": "Arroz importado uruguayo"
+  },
+  {
+    "producto_codigo": "0401",
+    "producto": "Arroz",
+    "variedad_codigo": "040102",
+    "variedad": "Arroz superior"
+  },
+  {
+    "producto_codigo": "0401",
+    "producto": "Arroz",
+    "variedad_codigo": "040109",
+    "variedad": "Arroz superior despuntado"
+  },
+  {
+    "producto_codigo": "0301",
+    "producto": "Arveja grano verde",
+    "variedad_codigo": "030101",
+    "variedad": "Arveja verde americana"
+  },
+  {
+    "producto_codigo": "0301",
+    "producto": "Arveja grano verde",
+    "variedad_codigo": "030104",
+    "variedad": "Arveja verde blanca serrana"
+  },
+  {
+    "producto_codigo": "1005",
+    "producto": "Azucar comercial",
+    "variedad_codigo": "100502",
+    "variedad": "Azucar blanca cartavio"
+  },
+  {
+    "producto_codigo": "1005",
+    "producto": "Azucar comercial",
+    "variedad_codigo": "100503",
+    "variedad": "Azucar blanca casa grande"
+  },
+  {
+    "producto_codigo": "1005",
+    "producto": "Azucar comercial",
+    "variedad_codigo": "100504",
+    "variedad": "Azucar blanca importada"
+  },
+  {
+    "producto_codigo": "1005",
+    "producto": "Azucar comercial",
+    "variedad_codigo": "100506",
+    "variedad": "Azucar blanca laredo"
+  },
+  {
+    "producto_codigo": "1005",
+    "producto": "Azucar comercial",
+    "variedad_codigo": "100507",
+    "variedad": "Azucar blanca nacional (granel)"
+  },
+  {
+    "producto_codigo": "1005",
+    "producto": "Azucar comercial",
+    "variedad_codigo": "100508",
+    "variedad": "Azucar blanca paramonga"
+  },
+  {
+    "producto_codigo": "1005",
+    "producto": "Azucar comercial",
+    "variedad_codigo": "100511",
+    "variedad": "Azucar blanca san jacinto"
+  },
+  {
+    "producto_codigo": "1005",
+    "producto": "Azucar comercial",
+    "variedad_codigo": "100512",
+    "variedad": "Azucar blanca tuman"
+  },
+  {
+    "producto_codigo": "1005",
+    "producto": "Azucar comercial",
+    "variedad_codigo": "100528",
+    "variedad": "Azucar rubia andahuasi"
+  },
+  {
+    "producto_codigo": "1005",
+    "producto": "Azucar comercial",
+    "variedad_codigo": "100534",
+    "variedad": "Azucar rubia caña brava"
+  },
+  {
+    "producto_codigo": "1005",
+    "producto": "Azucar comercial",
+    "variedad_codigo": "100514",
+    "variedad": "Azucar rubia cartavio"
+  },
+  {
+    "producto_codigo": "1005",
+    "producto": "Azucar comercial",
+    "variedad_codigo": "100515",
+    "variedad": "Azucar rubia casa grande"
+  },
+  {
+    "producto_codigo": "1005",
+    "producto": "Azucar comercial",
+    "variedad_codigo": "100535",
+    "variedad": "Azucar rubia dulce norte"
+  },
+  {
+    "producto_codigo": "1005",
+    "producto": "Azucar comercial",
+    "variedad_codigo": "100513",
+    "variedad": "Azucar rubia dulce olmos"
+  },
+  {
+    "producto_codigo": "1005",
+    "producto": "Azucar comercial",
+    "variedad_codigo": "100525",
+    "variedad": "Azucar rubia el ingenio"
+  },
+  {
+    "producto_codigo": "1005",
+    "producto": "Azucar comercial",
+    "variedad_codigo": "100517",
+    "variedad": "Azucar rubia importada"
+  },
+  {
+    "producto_codigo": "1005",
+    "producto": "Azucar comercial",
+    "variedad_codigo": "100533",
+    "variedad": "Azucar rubia la norte¿¿a"
+  },
+  {
+    "producto_codigo": "1005",
+    "producto": "Azucar comercial",
+    "variedad_codigo": "100518",
+    "variedad": "Azucar rubia laredo"
+  },
+  {
+    "producto_codigo": "1005",
+    "producto": "Azucar comercial",
+    "variedad_codigo": "100519",
+    "variedad": "Azucar rubia nacional (granel)"
+  },
+  {
+    "producto_codigo": "1005",
+    "producto": "Azucar comercial",
+    "variedad_codigo": "100520",
+    "variedad": "Azucar rubia paramonga"
+  },
+  {
+    "producto_codigo": "1005",
+    "producto": "Azucar comercial",
+    "variedad_codigo": "100521",
+    "variedad": "Azucar rubia pomalca"
+  },
+  {
+    "producto_codigo": "1005",
+    "producto": "Azucar comercial",
+    "variedad_codigo": "100522",
+    "variedad": "Azucar rubia pucala"
+  },
+  {
+    "producto_codigo": "1005",
+    "producto": "Azucar comercial",
+    "variedad_codigo": "100523",
+    "variedad": "Azucar rubia san jacinto"
+  },
+  {
+    "producto_codigo": "1005",
+    "producto": "Azucar comercial",
+    "variedad_codigo": "100524",
+    "variedad": "Azucar rubia tuman"
+  },
+  {
+    "producto_codigo": "0640",
+    "producto": "Bayas",
+    "variedad_codigo": "064002",
+    "variedad": "Frambuesa"
+  },
+  {
+    "producto_codigo": "0640",
+    "producto": "Bayas",
+    "variedad_codigo": "064003",
+    "variedad": "Zarzamora/mora"
+  },
+  {
+    "producto_codigo": "0209",
+    "producto": "Beterraga",
+    "variedad_codigo": "020901",
+    "variedad": "Beterraga"
+  },
+  {
+    "producto_codigo": "0902",
+    "producto": "Café",
+    "variedad_codigo": "090203",
+    "variedad": "Café chanchamayo (grano tostado)"
+  },
+  {
+    "producto_codigo": "0902",
+    "producto": "Café",
+    "variedad_codigo": "090202",
+    "variedad": "Café oro verde"
+  },
+  {
+    "producto_codigo": "0902",
+    "producto": "Café",
+    "variedad_codigo": "090201",
+    "variedad": "Café pergamino"
+  },
+  {
+    "producto_codigo": "0902",
+    "producto": "Café",
+    "variedad_codigo": "090204",
+    "variedad": "Café villa rica (grano tostado)"
+  },
+  {
+    "producto_codigo": "0101",
+    "producto": "Camote",
+    "variedad_codigo": "010101",
+    "variedad": "Camote amarillo"
+  },
+  {
+    "producto_codigo": "0101",
+    "producto": "Camote",
+    "variedad_codigo": "010103",
+    "variedad": "Camote morado"
+  },
+  {
+    "producto_codigo": "0212",
+    "producto": "Cebolla",
+    "variedad_codigo": "021201",
+    "variedad": "Cebolla cabeza blanca"
+  },
+  {
+    "producto_codigo": "0212",
+    "producto": "Cebolla",
+    "variedad_codigo": "021202",
+    "variedad": "Cebolla cabeza roja"
+  },
+  {
+    "producto_codigo": "0212",
+    "producto": "Cebolla",
+    "variedad_codigo": "021204",
+    "variedad": "Cebolla china"
+  },
+  {
+    "producto_codigo": "0641",
+    "producto": "Cerezas",
+    "variedad_codigo": "064101",
+    "variedad": "Cereza"
+  },
+  {
+    "producto_codigo": "0603",
+    "producto": "Chirimoya",
+    "variedad_codigo": "060301",
+    "variedad": "Chirimoya criolla o huayco"
+  },
+  {
+    "producto_codigo": "0603",
+    "producto": "Chirimoya",
+    "variedad_codigo": "060302",
+    "variedad": "Chirimoya cumbe"
+  },
+  {
+    "producto_codigo": "0403",
+    "producto": "Choclo",
+    "variedad_codigo": "040304",
+    "variedad": "Choclo (tipo cusco)"
+  },
+  {
+    "producto_codigo": "0604",
+    "producto": "Ciruela",
+    "variedad_codigo": "060405",
+    "variedad": "Ciruela nectarina (importada)"
+  },
+  {
+    "producto_codigo": "0604",
+    "producto": "Ciruela",
+    "variedad_codigo": "060406",
+    "variedad": "Ciruela roja/criolla"
+  },
+  {
+    "producto_codigo": "0604",
+    "producto": "Ciruela",
+    "variedad_codigo": "060407",
+    "variedad": "Ciruela santa rosa/nacional"
+  },
+  {
+    "producto_codigo": "0215",
+    "producto": "Culantro",
+    "variedad_codigo": "021501",
+    "variedad": "Culantro"
+  },
+  {
+    "producto_codigo": "0216",
+    "producto": "Esparrago",
+    "variedad_codigo": "021601",
+    "variedad": "Esparrago"
+  },
+  {
+    "producto_codigo": "0217",
+    "producto": "Espinaca",
+    "variedad_codigo": "021701",
+    "variedad": "Espinaca"
+  },
+  {
+    "producto_codigo": "1010",
+    "producto": "Fideos",
+    "variedad_codigo": "101018",
+    "variedad": "Fideos anita a granel"
+  },
+  {
+    "producto_codigo": "1010",
+    "producto": "Fideos",
+    "variedad_codigo": "101017",
+    "variedad": "Fideos cogorno a granel."
+  },
+  {
+    "producto_codigo": "1010",
+    "producto": "Fideos",
+    "variedad_codigo": "101013",
+    "variedad": "Fideos molitalia spaghetti/tallarin"
+  },
+  {
+    "producto_codigo": "1010",
+    "producto": "Fideos",
+    "variedad_codigo": "101021",
+    "variedad": "Fideos spaghetti tottus 500gr"
+  },
+  {
+    "producto_codigo": "0607",
+    "producto": "Fresa",
+    "variedad_codigo": "060705",
+    "variedad": "Fresa aroma"
+  },
+  {
+    "producto_codigo": "0607",
+    "producto": "Fresa",
+    "variedad_codigo": "060706",
+    "variedad": "Fresa cama rosa"
+  },
+  {
+    "producto_codigo": "0607",
+    "producto": "Fresa",
+    "variedad_codigo": "060708",
+    "variedad": "Fresa sabrina"
+  },
+  {
+    "producto_codigo": "0607",
+    "producto": "Fresa",
+    "variedad_codigo": "060707",
+    "variedad": "Fresa san andreas"
+  },
+  {
+    "producto_codigo": "0501",
+    "producto": "Frijol grano seco",
+    "variedad_codigo": "050101",
+    "variedad": "Frijol canario"
+  },
+  {
+    "producto_codigo": "0501",
+    "producto": "Frijol grano seco",
+    "variedad_codigo": "050102",
+    "variedad": "Frijol castilla"
+  },
+  {
+    "producto_codigo": "0501",
+    "producto": "Frijol grano seco",
+    "variedad_codigo": "050109",
+    "variedad": "Frijol seco panamito"
+  },
+  {
+    "producto_codigo": "0302",
+    "producto": "Frijol grano verde",
+    "variedad_codigo": "030201",
+    "variedad": "Frijol verde canario"
+  },
+  {
+    "producto_codigo": "0502",
+    "producto": "Garbanzo grano seco",
+    "variedad_codigo": "050201",
+    "variedad": "Garbanzo"
+  },
+  {
+    "producto_codigo": "0608",
+    "producto": "Granadilla",
+    "variedad_codigo": "060801",
+    "variedad": "Granadilla (costa)"
+  },
+  {
+    "producto_codigo": "0608",
+    "producto": "Granadilla",
+    "variedad_codigo": "060803",
+    "variedad": "Granadilla mixta"
+  },
+  {
+    "producto_codigo": "0608",
+    "producto": "Granadilla",
+    "variedad_codigo": "060802",
+    "variedad": "Granadilla (selva)"
+  },
+  {
+    "producto_codigo": "0609",
+    "producto": "Guanabana",
+    "variedad_codigo": "060901",
+    "variedad": "Guanabana (costa)"
+  },
+  {
+    "producto_codigo": "0609",
+    "producto": "Guanabana",
+    "variedad_codigo": "060902",
+    "variedad": "Guanabana (selva)"
+  },
+  {
+    "producto_codigo": "0303",
+    "producto": "Haba grano verde",
+    "variedad_codigo": "030302",
+    "variedad": "Haba verde serrana"
+  },
+  {
+    "producto_codigo": "1011",
+    "producto": "Harina",
+    "variedad_codigo": "101101",
+    "variedad": "Harina a granel de trigo"
+  },
+  {
+    "producto_codigo": "1011",
+    "producto": "Harina",
+    "variedad_codigo": "101121",
+    "variedad": "Harina especial sta. anita"
+  },
+  {
+    "producto_codigo": "1011",
+    "producto": "Harina",
+    "variedad_codigo": "101122",
+    "variedad": "Harina especial don angelo"
+  },
+  {
+    "producto_codigo": "1011",
+    "producto": "Harina",
+    "variedad_codigo": "101126",
+    "variedad": "Harina nicolini"
+  },
+  {
+    "producto_codigo": "0218",
+    "producto": "Hortalizas chinas",
+    "variedad_codigo": "021803",
+    "variedad": "Brocoli"
+  },
+  {
+    "producto_codigo": "0218",
+    "producto": "Hortalizas chinas",
+    "variedad_codigo": "021809",
+    "variedad": "Col china/longapa"
+  },
+  {
+    "producto_codigo": "0218",
+    "producto": "Hortalizas chinas",
+    "variedad_codigo": "021813",
+    "variedad": "Frejolito chino"
+  },
+  {
+    "producto_codigo": "0218",
+    "producto": "Hortalizas chinas",
+    "variedad_codigo": "021815",
+    "variedad": "Holantau/organica"
+  },
+  {
+    "producto_codigo": "0218",
+    "producto": "Hortalizas chinas",
+    "variedad_codigo": "021816",
+    "variedad": "Kion"
+  },
+  {
+    "producto_codigo": "0218",
+    "producto": "Hortalizas chinas",
+    "variedad_codigo": "021817",
+    "variedad": "Pacchoy"
+  },
+  {
+    "producto_codigo": "1105",
+    "producto": "Huevos",
+    "variedad_codigo": "110505",
+    "variedad": "Huevos de gallina pardos p.uno x 30 und."
+  },
+  {
+    "producto_codigo": "1105",
+    "producto": "Huevos",
+    "variedad_codigo": "110504",
+    "variedad": "Huevos de gallina pardos tottus x 30 und."
+  },
+  {
+    "producto_codigo": "1105",
+    "producto": "Huevos",
+    "variedad_codigo": "110503",
+    "variedad": "Huevos pardos tottus x 30 und."
+  },
+  {
+    "producto_codigo": "1105",
+    "producto": "Huevos",
+    "variedad_codigo": "110501",
+    "variedad": "Huevos rosados"
+  },
+  {
+    "producto_codigo": "1104",
+    "producto": "Leche",
+    "variedad_codigo": "110417",
+    "variedad": "Leche entera uht laive en bolsa (12 bolsas de 900 ml)"
+  },
+  {
+    "producto_codigo": "1104",
+    "producto": "Leche",
+    "variedad_codigo": "110416",
+    "variedad": "Leche entera uht vigor en bolsa (12 bolsas de 800 ml)"
+  },
+  {
+    "producto_codigo": "1104",
+    "producto": "Leche",
+    "variedad_codigo": "110402",
+    "variedad": "Leche evaporada"
+  },
+  {
+    "producto_codigo": "1104",
+    "producto": "Leche",
+    "variedad_codigo": "110413",
+    "variedad": "Leche fresca gloria en bolsa (12 bolsas de litro)"
+  },
+  {
+    "producto_codigo": "1104",
+    "producto": "Leche",
+    "variedad_codigo": "110409",
+    "variedad": "Leche ideal azul/calcio 400gr x 48 latas"
+  },
+  {
+    "producto_codigo": "1104",
+    "producto": "Leche",
+    "variedad_codigo": "110407",
+    "variedad": "Leche reconstituida (azul) 395 gr"
+  },
+  {
+    "producto_codigo": "0220",
+    "producto": "Lechuga",
+    "variedad_codigo": "022001",
+    "variedad": "Lechuga americana"
+  },
+  {
+    "producto_codigo": "0220",
+    "producto": "Lechuga",
+    "variedad_codigo": "022002",
+    "variedad": "Lechuga criolla seda"
+  },
+  {
+    "producto_codigo": "0220",
+    "producto": "Lechuga",
+    "variedad_codigo": "022003",
+    "variedad": "Lechuga romana hidroponica"
+  },
+  {
+    "producto_codigo": "0220",
+    "producto": "Lechuga",
+    "variedad_codigo": "022004",
+    "variedad": "Lechuga serrana seda"
+  },
+  {
+    "producto_codigo": "0504",
+    "producto": "Lenteja grano seco",
+    "variedad_codigo": "050406",
+    "variedad": "Lenteja"
+  },
+  {
+    "producto_codigo": "0611",
+    "producto": "Limon",
+    "variedad_codigo": "061101",
+    "variedad": "Limon sutil bolsa"
+  },
+  {
+    "producto_codigo": "0611",
+    "producto": "Limon",
+    "variedad_codigo": "061102",
+    "variedad": "Limon sutil cajon"
+  },
+  {
+    "producto_codigo": "0611",
+    "producto": "Limon",
+    "variedad_codigo": "061106",
+    "variedad": "Limon tahití"
+  },
+  {
+    "producto_codigo": "0106",
+    "producto": "Maca",
+    "variedad_codigo": "010601",
+    "variedad": "Maca"
+  },
+  {
+    "producto_codigo": "0404",
+    "producto": "Maiz seco",
+    "variedad_codigo": "040401",
+    "variedad": "Maiz amarillo duro"
+  },
+  {
+    "producto_codigo": "0404",
+    "producto": "Maiz seco",
+    "variedad_codigo": "040409",
+    "variedad": "Maiz marlo/coronta de maiz"
+  },
+  {
+    "producto_codigo": "0404",
+    "producto": "Maiz seco",
+    "variedad_codigo": "040410",
+    "variedad": "Maiz montaña"
+  },
+  {
+    "producto_codigo": "0404",
+    "producto": "Maiz seco",
+    "variedad_codigo": "040411",
+    "variedad": "Maiz morado"
+  },
+  {
+    "producto_codigo": "0404",
+    "producto": "Maiz seco",
+    "variedad_codigo": "040414",
+    "variedad": "Maiz mote pelado"
+  },
+  {
+    "producto_codigo": "0404",
+    "producto": "Maiz seco",
+    "variedad_codigo": "040415",
+    "variedad": "Maiz provincia"
+  },
+  {
+    "producto_codigo": "0614",
+    "producto": "Mandarina",
+    "variedad_codigo": "061402",
+    "variedad": "Mandarina clementina"
+  },
+  {
+    "producto_codigo": "0614",
+    "producto": "Mandarina",
+    "variedad_codigo": "061414",
+    "variedad": "Mandarina dancy"
+  },
+  {
+    "producto_codigo": "0614",
+    "producto": "Mandarina",
+    "variedad_codigo": "061409",
+    "variedad": "Mandarina kori"
+  },
+  {
+    "producto_codigo": "0614",
+    "producto": "Mandarina",
+    "variedad_codigo": "061410",
+    "variedad": "Mandarina malvacea"
+  },
+  {
+    "producto_codigo": "0614",
+    "producto": "Mandarina",
+    "variedad_codigo": "061412",
+    "variedad": "Mandarina murcott"
+  },
+  {
+    "producto_codigo": "0614",
+    "producto": "Mandarina",
+    "variedad_codigo": "061413",
+    "variedad": "Mandarina nova"
+  },
+  {
+    "producto_codigo": "0614",
+    "producto": "Mandarina",
+    "variedad_codigo": "061422",
+    "variedad": "Mandarina pixie"
+  },
+  {
+    "producto_codigo": "0614",
+    "producto": "Mandarina",
+    "variedad_codigo": "061423",
+    "variedad": "Mandarina primosole"
+  },
+  {
+    "producto_codigo": "0614",
+    "producto": "Mandarina",
+    "variedad_codigo": "061418",
+    "variedad": "Mandarina rio de oro"
+  },
+  {
+    "producto_codigo": "0614",
+    "producto": "Mandarina",
+    "variedad_codigo": "061419",
+    "variedad": "Mandarina satsuma"
+  },
+  {
+    "producto_codigo": "0614",
+    "producto": "Mandarina",
+    "variedad_codigo": "061421",
+    "variedad": "Mandarina tangerina"
+  },
+  {
+    "producto_codigo": "0614",
+    "producto": "Mandarina",
+    "variedad_codigo": "061424",
+    "variedad": "Mandarina tango"
+  },
+  {
+    "producto_codigo": "0615",
+    "producto": "Mango",
+    "variedad_codigo": "061506",
+    "variedad": "Mango chato"
+  },
+  {
+    "producto_codigo": "0615",
+    "producto": "Mango",
+    "variedad_codigo": "061510",
+    "variedad": "Mango criollo"
+  },
+  {
+    "producto_codigo": "0615",
+    "producto": "Mango",
+    "variedad_codigo": "061513",
+    "variedad": "Mango edward"
+  },
+  {
+    "producto_codigo": "0615",
+    "producto": "Mango",
+    "variedad_codigo": "061516",
+    "variedad": "Mango haden /hayde"
+  },
+  {
+    "producto_codigo": "0615",
+    "producto": "Mango",
+    "variedad_codigo": "061519",
+    "variedad": "Mango kafro"
+  },
+  {
+    "producto_codigo": "0615",
+    "producto": "Mango",
+    "variedad_codigo": "061520",
+    "variedad": "Mango kent"
+  },
+  {
+    "producto_codigo": "0615",
+    "producto": "Mango",
+    "variedad_codigo": "061522",
+    "variedad": "Mango pico de loro"
+  },
+  {
+    "producto_codigo": "0615",
+    "producto": "Mango",
+    "variedad_codigo": "061523",
+    "variedad": "Mango rosado"
+  },
+  {
+    "producto_codigo": "0617",
+    "producto": "Manzana",
+    "variedad_codigo": "061701",
+    "variedad": "Manzana cte/para agua"
+  },
+  {
+    "producto_codigo": "0617",
+    "producto": "Manzana",
+    "variedad_codigo": "061703",
+    "variedad": "Manzana delicia"
+  },
+  {
+    "producto_codigo": "0617",
+    "producto": "Manzana",
+    "variedad_codigo": "061704",
+    "variedad": "Manzana golden"
+  },
+  {
+    "producto_codigo": "0617",
+    "producto": "Manzana",
+    "variedad_codigo": "061707",
+    "variedad": "Manzana importada"
+  },
+  {
+    "producto_codigo": "0617",
+    "producto": "Manzana",
+    "variedad_codigo": "061709",
+    "variedad": "Manzana israel"
+  },
+  {
+    "producto_codigo": "0617",
+    "producto": "Manzana",
+    "variedad_codigo": "061714",
+    "variedad": "Manzana winter"
+  },
+  {
+    "producto_codigo": "0618",
+    "producto": "Maracuya",
+    "variedad_codigo": "061801",
+    "variedad": "Maracuya"
+  },
+  {
+    "producto_codigo": "0107",
+    "producto": "Mashua",
+    "variedad_codigo": "0107",
+    "variedad": "Mashua"
+  },
+  {
+    "producto_codigo": "0620",
+    "producto": "Melocoton",
+    "variedad_codigo": "062003",
+    "variedad": "Melocoton blanquillo"
+  },
+  {
+    "producto_codigo": "0620",
+    "producto": "Melocoton",
+    "variedad_codigo": "062006",
+    "variedad": "Melocoton durazno huayco"
+  },
+  {
+    "producto_codigo": "0619",
+    "producto": "Melon",
+    "variedad_codigo": "061901",
+    "variedad": "Melon coquito"
+  },
+  {
+    "producto_codigo": "0619",
+    "producto": "Melon",
+    "variedad_codigo": "061903",
+    "variedad": "Melon esmeralda"
+  },
+  {
+    "producto_codigo": "0619",
+    "producto": "Melon",
+    "variedad_codigo": "061904",
+    "variedad": "Melon honey dew"
+  },
+  {
+    "producto_codigo": "0619",
+    "producto": "Melon",
+    "variedad_codigo": "061909",
+    "variedad": "Melon menta"
+  },
+  {
+    "producto_codigo": "0621",
+    "producto": "Membrillo",
+    "variedad_codigo": "062101",
+    "variedad": "Membrillo criollo"
+  },
+  {
+    "producto_codigo": "0621",
+    "producto": "Membrillo",
+    "variedad_codigo": "062103",
+    "variedad": "Membrillo serrano"
+  },
+  {
+    "producto_codigo": "0622",
+    "producto": "Naranja",
+    "variedad_codigo": "062208",
+    "variedad": "Naranja miniola"
+  },
+  {
+    "producto_codigo": "0622",
+    "producto": "Naranja",
+    "variedad_codigo": "062207",
+    "variedad": "Naranja primavera"
+  },
+  {
+    "producto_codigo": "0622",
+    "producto": "Naranja",
+    "variedad_codigo": "062209",
+    "variedad": "Naranja tangelo costa"
+  },
+  {
+    "producto_codigo": "0622",
+    "producto": "Naranja",
+    "variedad_codigo": "062210",
+    "variedad": "Naranja tangelo selva"
+  },
+  {
+    "producto_codigo": "0622",
+    "producto": "Naranja",
+    "variedad_codigo": "062212",
+    "variedad": "Naranja valencia"
+  },
+  {
+    "producto_codigo": "0622",
+    "producto": "Naranja",
+    "variedad_codigo": "062214",
+    "variedad": "Naranja washington naval"
+  },
+  {
+    "producto_codigo": "0622",
+    "producto": "Naranja",
+    "variedad_codigo": "062216",
+    "variedad": "Naranjita china kin kan"
+  },
+  {
+    "producto_codigo": "0102",
+    "producto": "Olluco",
+    "variedad_codigo": "010201",
+    "variedad": "Olluco largo"
+  },
+  {
+    "producto_codigo": "0102",
+    "producto": "Olluco",
+    "variedad_codigo": "010202",
+    "variedad": "Olluco redondo"
+  },
+  {
+    "producto_codigo": "0904",
+    "producto": "Otros agricolas agroindustriales",
+    "variedad_codigo": "090414",
+    "variedad": "Chia blanca"
+  },
+  {
+    "producto_codigo": "0904",
+    "producto": "Otros agricolas agroindustriales",
+    "variedad_codigo": "090415",
+    "variedad": "Chia negra"
+  },
+  {
+    "producto_codigo": "0904",
+    "producto": "Otros agricolas agroindustriales",
+    "variedad_codigo": "090416",
+    "variedad": "Hoja de coca ayacucho"
+  },
+  {
+    "producto_codigo": "0904",
+    "producto": "Otros agricolas agroindustriales",
+    "variedad_codigo": "090403",
+    "variedad": "Hoja de coca tingo maria"
+  },
+  {
+    "producto_codigo": "0408",
+    "producto": "Otros cereales",
+    "variedad_codigo": "040801",
+    "variedad": "Cañihua"
+  },
+  {
+    "producto_codigo": "0408",
+    "producto": "Otros cereales",
+    "variedad_codigo": "040803",
+    "variedad": "Kiwicha"
+  },
+  {
+    "producto_codigo": "0638",
+    "producto": "Otros fruticolas",
+    "variedad_codigo": "063832",
+    "variedad": "Aguaymanto"
+  },
+  {
+    "producto_codigo": "0638",
+    "producto": "Otros fruticolas",
+    "variedad_codigo": "063802",
+    "variedad": "Albaricoque"
+  },
+  {
+    "producto_codigo": "0638",
+    "producto": "Otros fruticolas",
+    "variedad_codigo": "063804",
+    "variedad": "Anona"
+  },
+  {
+    "producto_codigo": "0638",
+    "producto": "Otros fruticolas",
+    "variedad_codigo": "063833",
+    "variedad": "Arándano"
+  },
+  {
+    "producto_codigo": "0638",
+    "producto": "Otros fruticolas",
+    "variedad_codigo": "063806",
+    "variedad": "Caimito (selva)"
+  },
+  {
+    "producto_codigo": "0638",
+    "producto": "Otros fruticolas",
+    "variedad_codigo": "063807",
+    "variedad": "Camu camu"
+  },
+  {
+    "producto_codigo": "0638",
+    "producto": "Otros fruticolas",
+    "variedad_codigo": "063808",
+    "variedad": "Carambola"
+  },
+  {
+    "producto_codigo": "0638",
+    "producto": "Otros fruticolas",
+    "variedad_codigo": "063811",
+    "variedad": "Cocona"
+  },
+  {
+    "producto_codigo": "0638",
+    "producto": "Otros fruticolas",
+    "variedad_codigo": "063813",
+    "variedad": "Granada"
+  },
+  {
+    "producto_codigo": "0638",
+    "producto": "Otros fruticolas",
+    "variedad_codigo": "063814",
+    "variedad": "Guayaba"
+  },
+  {
+    "producto_codigo": "0638",
+    "producto": "Otros fruticolas",
+    "variedad_codigo": "063817",
+    "variedad": "Kake/kaki"
+  },
+  {
+    "producto_codigo": "0638",
+    "producto": "Otros fruticolas",
+    "variedad_codigo": "063828",
+    "variedad": "Kiwi importado"
+  },
+  {
+    "producto_codigo": "0638",
+    "producto": "Otros fruticolas",
+    "variedad_codigo": "063818",
+    "variedad": "Lima dulce"
+  },
+  {
+    "producto_codigo": "0638",
+    "producto": "Otros fruticolas",
+    "variedad_codigo": "063827",
+    "variedad": "Lulo"
+  },
+  {
+    "producto_codigo": "0638",
+    "producto": "Otros fruticolas",
+    "variedad_codigo": "063819",
+    "variedad": "Mamey"
+  },
+  {
+    "producto_codigo": "0638",
+    "producto": "Otros fruticolas",
+    "variedad_codigo": "063835",
+    "variedad": "Noni"
+  },
+  {
+    "producto_codigo": "0638",
+    "producto": "Otros fruticolas",
+    "variedad_codigo": "063834",
+    "variedad": "Pitahaya"
+  },
+  {
+    "producto_codigo": "0638",
+    "producto": "Otros fruticolas",
+    "variedad_codigo": "063837",
+    "variedad": "Rambután"
+  },
+  {
+    "producto_codigo": "0638",
+    "producto": "Otros fruticolas",
+    "variedad_codigo": "063836",
+    "variedad": "Sanki"
+  },
+  {
+    "producto_codigo": "0638",
+    "producto": "Otros fruticolas",
+    "variedad_codigo": "063823",
+    "variedad": "Tumbo"
+  },
+  {
+    "producto_codigo": "0638",
+    "producto": "Otros fruticolas",
+    "variedad_codigo": "063824",
+    "variedad": "Yacon (llacon)"
+  },
+  {
+    "producto_codigo": "0638",
+    "producto": "Otros fruticolas",
+    "variedad_codigo": "063825",
+    "variedad": "Zapote"
+  },
+  {
+    "producto_codigo": "0506",
+    "producto": "Pallar grano seco",
+    "variedad_codigo": "050601",
+    "variedad": "Pallar"
+  },
+  {
+    "producto_codigo": "0305",
+    "producto": "Pallar grano verde",
+    "variedad_codigo": "030501",
+    "variedad": "Pallar verde serrucho"
+  },
+  {
+    "producto_codigo": "0626",
+    "producto": "Palta",
+    "variedad_codigo": "062605",
+    "variedad": "Palta criolla"
+  },
+  {
+    "producto_codigo": "0626",
+    "producto": "Palta",
+    "variedad_codigo": "062606",
+    "variedad": "Palta dedo"
+  },
+  {
+    "producto_codigo": "0626",
+    "producto": "Palta",
+    "variedad_codigo": "062619",
+    "variedad": "Palta ettinger"
+  },
+  {
+    "producto_codigo": "0626",
+    "producto": "Palta",
+    "variedad_codigo": "062607",
+    "variedad": "Palta fuerte"
+  },
+  {
+    "producto_codigo": "0626",
+    "producto": "Palta",
+    "variedad_codigo": "062609",
+    "variedad": "Palta hall"
+  },
+  {
+    "producto_codigo": "0626",
+    "producto": "Palta",
+    "variedad_codigo": "062610",
+    "variedad": "Palta hass"
+  },
+  {
+    "producto_codigo": "0626",
+    "producto": "Palta",
+    "variedad_codigo": "062614",
+    "variedad": "Palta naval"
+  },
+  {
+    "producto_codigo": "0626",
+    "producto": "Palta",
+    "variedad_codigo": "062616",
+    "variedad": "Palta queen"
+  },
+  {
+    "producto_codigo": "0626",
+    "producto": "Palta",
+    "variedad_codigo": "062617",
+    "variedad": "Palta villa campa"
+  },
+  {
+    "producto_codigo": "0626",
+    "producto": "Palta",
+    "variedad_codigo": "062618",
+    "variedad": "Palta zutano"
+  },
+  {
+    "producto_codigo": "0104",
+    "producto": "Papa",
+    "variedad_codigo": "010401",
+    "variedad": "Papa amarilla"
+  },
+  {
+    "producto_codigo": "0104",
+    "producto": "Papa",
+    "variedad_codigo": "010406",
+    "variedad": "Papa blanca"
+  },
+  {
+    "producto_codigo": "0104",
+    "producto": "Papa",
+    "variedad_codigo": "010411",
+    "variedad": "Papa canchan"
+  },
+  {
+    "producto_codigo": "0104",
+    "producto": "Papa",
+    "variedad_codigo": "010407",
+    "variedad": "Papa color"
+  },
+  {
+    "producto_codigo": "0104",
+    "producto": "Papa",
+    "variedad_codigo": "010404",
+    "variedad": "Papa huamantanga"
+  },
+  {
+    "producto_codigo": "0104",
+    "producto": "Papa",
+    "variedad_codigo": "010402",
+    "variedad": "Papa huayro"
+  },
+  {
+    "producto_codigo": "0104",
+    "producto": "Papa",
+    "variedad_codigo": "010419",
+    "variedad": "Papa negra andina"
+  },
+  {
+    "producto_codigo": "0104",
+    "producto": "Papa",
+    "variedad_codigo": "010415",
+    "variedad": "Papa perricholi"
+  },
+  {
+    "producto_codigo": "0104",
+    "producto": "Papa",
+    "variedad_codigo": "010403",
+    "variedad": "Papa peruanita"
+  },
+  {
+    "producto_codigo": "0104",
+    "producto": "Papa",
+    "variedad_codigo": "010417",
+    "variedad": "Papa unica"
+  },
+  {
+    "producto_codigo": "0104",
+    "producto": "Papa",
+    "variedad_codigo": "010418",
+    "variedad": "Papa yungay"
+  },
+  {
+    "producto_codigo": "1014",
+    "producto": "Papa seca",
+    "variedad_codigo": "101401",
+    "variedad": "Papa seca"
+  },
+  {
+    "producto_codigo": "0627",
+    "producto": "Papaya",
+    "variedad_codigo": "062702",
+    "variedad": "Papaya"
+  },
+  {
+    "producto_codigo": "0627",
+    "producto": "Papaya",
+    "variedad_codigo": "062701",
+    "variedad": "Papaya (costa)"
+  },
+  {
+    "producto_codigo": "0630",
+    "producto": "Pepino",
+    "variedad_codigo": "063003",
+    "variedad": "Pepino rayado o melon"
+  },
+  {
+    "producto_codigo": "0224",
+    "producto": "Pimiento fresco",
+    "variedad_codigo": "022401",
+    "variedad": "Pimiento morron"
+  },
+  {
+    "producto_codigo": "0628",
+    "producto": "Piña",
+    "variedad_codigo": "062803",
+    "variedad": "Piña criolla"
+  },
+  {
+    "producto_codigo": "0628",
+    "producto": "Piña",
+    "variedad_codigo": "062809",
+    "variedad": "Piña golden"
+  },
+  {
+    "producto_codigo": "0628",
+    "producto": "Piña",
+    "variedad_codigo": "062802",
+    "variedad": "Piña hawaiana"
+  },
+  {
+    "producto_codigo": "0629",
+    "producto": "Platano",
+    "variedad_codigo": "062901",
+    "variedad": "Platano bellaco"
+  },
+  {
+    "producto_codigo": "0629",
+    "producto": "Platano",
+    "variedad_codigo": "062902",
+    "variedad": "Platano bizcocho"
+  },
+  {
+    "producto_codigo": "0629",
+    "producto": "Platano",
+    "variedad_codigo": "062904",
+    "variedad": "Platano isla"
+  },
+  {
+    "producto_codigo": "0629",
+    "producto": "Platano",
+    "variedad_codigo": "062905",
+    "variedad": "Platano manzano"
+  },
+  {
+    "producto_codigo": "0629",
+    "producto": "Platano",
+    "variedad_codigo": "062906",
+    "variedad": "Platano morado"
+  },
+  {
+    "producto_codigo": "0629",
+    "producto": "Platano",
+    "variedad_codigo": "062907",
+    "variedad": "Platano palillo"
+  },
+  {
+    "producto_codigo": "0629",
+    "producto": "Platano",
+    "variedad_codigo": "062903",
+    "variedad": "Platano seda congo"
+  },
+  {
+    "producto_codigo": "0629",
+    "producto": "Platano",
+    "variedad_codigo": "062910",
+    "variedad": "Platano seda (selva)"
+  },
+  {
+    "producto_codigo": "1301",
+    "producto": "Pollo",
+    "variedad_codigo": "130101",
+    "variedad": "Pollo vivo"
+  },
+  {
+    "producto_codigo": "0405",
+    "producto": "Quinua",
+    "variedad_codigo": "040505",
+    "variedad": "Quinua blanca"
+  },
+  {
+    "producto_codigo": "0405",
+    "producto": "Quinua",
+    "variedad_codigo": "040507",
+    "variedad": "Quinua negra"
+  },
+  {
+    "producto_codigo": "0405",
+    "producto": "Quinua",
+    "variedad_codigo": "040506",
+    "variedad": "Quinua roja"
+  },
+  {
+    "producto_codigo": "0633",
+    "producto": "Sandia",
+    "variedad_codigo": "063301",
+    "variedad": "Sandia"
+  },
+  {
+    "producto_codigo": "0306",
+    "producto": "Tarhui",
+    "variedad_codigo": "030602",
+    "variedad": "Tarhui o chocho"
+  },
+  {
+    "producto_codigo": "0228",
+    "producto": "Tomate",
+    "variedad_codigo": "022810",
+    "variedad": "Tomate"
+  },
+  {
+    "producto_codigo": "0636",
+    "producto": "Tuna",
+    "variedad_codigo": "063601",
+    "variedad": "Tuna amarilla"
+  },
+  {
+    "producto_codigo": "0636",
+    "producto": "Tuna",
+    "variedad_codigo": "063602",
+    "variedad": "Tuna blanca"
+  },
+  {
+    "producto_codigo": "0636",
+    "producto": "Tuna",
+    "variedad_codigo": "063603",
+    "variedad": "Tuna morada/rosada"
+  },
+  {
+    "producto_codigo": "0637",
+    "producto": "Uva",
+    "variedad_codigo": "063701",
+    "variedad": "Uva alfonso lavalett"
+  },
+  {
+    "producto_codigo": "0637",
+    "producto": "Uva",
+    "variedad_codigo": "063727",
+    "variedad": "Uva arra"
+  },
+  {
+    "producto_codigo": "0637",
+    "producto": "Uva",
+    "variedad_codigo": "063704",
+    "variedad": "Uva borgoña"
+  },
+  {
+    "producto_codigo": "0637",
+    "producto": "Uva",
+    "variedad_codigo": "063730",
+    "variedad": "Uva candy"
+  },
+  {
+    "producto_codigo": "0637",
+    "producto": "Uva",
+    "variedad_codigo": "063724",
+    "variedad": "Uva crimson"
+  },
+  {
+    "producto_codigo": "0637",
+    "producto": "Uva",
+    "variedad_codigo": "063706",
+    "variedad": "Uva flame"
+  },
+  {
+    "producto_codigo": "0637",
+    "producto": "Uva",
+    "variedad_codigo": "063721",
+    "variedad": "Uva fley"
+  },
+  {
+    "producto_codigo": "0637",
+    "producto": "Uva",
+    "variedad_codigo": "063707",
+    "variedad": "Uva italia"
+  },
+  {
+    "producto_codigo": "0637",
+    "producto": "Uva",
+    "variedad_codigo": "063728",
+    "variedad": "Uva magenta"
+  },
+  {
+    "producto_codigo": "0637",
+    "producto": "Uva",
+    "variedad_codigo": "063709",
+    "variedad": "Uva palestina"
+  },
+  {
+    "producto_codigo": "0637",
+    "producto": "Uva",
+    "variedad_codigo": "063722",
+    "variedad": "Uva pirovano"
+  },
+  {
+    "producto_codigo": "0637",
+    "producto": "Uva",
+    "variedad_codigo": "063711",
+    "variedad": "Uva quebranta/moscatel"
+  },
+  {
+    "producto_codigo": "0637",
+    "producto": "Uva",
+    "variedad_codigo": "063712",
+    "variedad": "Uva red globe"
+  },
+  {
+    "producto_codigo": "0637",
+    "producto": "Uva",
+    "variedad_codigo": "063716",
+    "variedad": "Uva rosada"
+  },
+  {
+    "producto_codigo": "0637",
+    "producto": "Uva",
+    "variedad_codigo": "063729",
+    "variedad": "Uva royal"
+  },
+  {
+    "producto_codigo": "0637",
+    "producto": "Uva",
+    "variedad_codigo": "063718",
+    "variedad": "Uva sultanina"
+  },
+  {
+    "producto_codigo": "0637",
+    "producto": "Uva",
+    "variedad_codigo": "063723",
+    "variedad": "Uva superior"
+  },
+  {
+    "producto_codigo": "0637",
+    "producto": "Uva",
+    "variedad_codigo": "063725",
+    "variedad": "Uva thompson"
+  },
+  {
+    "producto_codigo": "0637",
+    "producto": "Uva",
+    "variedad_codigo": "063726",
+    "variedad": "Uva zafiro"
+  },
+  {
+    "producto_codigo": "0229",
+    "producto": "Vainita",
+    "variedad_codigo": "022901",
+    "variedad": "Vainita americana"
+  },
+  {
+    "producto_codigo": "0105",
+    "producto": "Yuca",
+    "variedad_codigo": "010501",
+    "variedad": "Yuca amarilla"
+  },
+  {
+    "producto_codigo": "0230",
+    "producto": "Zanahoria",
+    "variedad_codigo": "023001",
+    "variedad": "Zanahoria"
+  },
+  {
+    "producto_codigo": "0231",
+    "producto": "Zapallo",
+    "variedad_codigo": "023101",
+    "variedad": "Zapallo italiano"
+  },
+  {
+    "producto_codigo": "0231",
+    "producto": "Zapallo",
+    "variedad_codigo": "023102",
+    "variedad": "Zapallo loche"
+  },
+  {
+    "producto_codigo": "0231",
+    "producto": "Zapallo",
+    "variedad_codigo": "023103",
+    "variedad": "Zapallo macre"
+  }
+]
