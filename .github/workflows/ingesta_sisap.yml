@@ -1,0 +1,40 @@
+# .github/workflows/ingesta-sisap.yml
+name: Cron Diario - Ingesta Bronze SISAP
+
+on:
+  schedule:
+    # ⏰ Corre de forma automática a las 07:30 AM UTC (02:30 AM hora de Perú)
+    - cron: '30 7 * * *'
+  workflow_dispatch:
+    # 🚀 Activa el botón gris en la interfaz web de GitHub para pruebas manuales
+
+jobs:
+  ejecutar_ingesta:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 Clonar el Repositorio
+      uses: actions/checkout@v4
+
+    - name: 🐍 Configurar Python 3.10
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: 🛠️ Instalar Dependencias (Pip Tradicional)
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests beautifulsoup4
+
+    - name: 🛰️ Ejecutar Script del SISAP
+      run: |
+        # Seteamos el PYTHONPATH para que Python reconozca la raíz del monorepo al importar
+        export PYTHONPATH="${{ github.workspace }}"
+        python observatorio/ingesta/sisap/run_ingesta_sisap.py
+
+    - name: 📦 Almacenar HTML Crudo como Artefacto de GitHub
+      uses: actions/upload-artifact@v4
+      with:
+        name: snapshot-sisap-html
+        path: observatorio/ingesta/sisap/output_bronze_sisap/
+        retention-days: 3
