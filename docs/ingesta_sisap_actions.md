@@ -14,11 +14,11 @@ Este componente automatiza la recolección diaria de datos macro de precios de l
 
 ## 🏗️ Decisiones de Arquitectura e Infraestructura
 
-### 1. Ingesta Iterativa en Bloques Diarios (Backfill Seguro)
+### 1. Ingesta Iterativa en Bloques Diarios y Segmentación por Lotes
 
-* **Desafío técnico:** El backend del SISAP procesa los rangos mensuales expandiendo el HTML de forma matricial (una columna por día), elevando la complejidad del parseo. Además, la infraestructura estatal sufre intermitencias e imprevistos (*Read Timeouts*) ante ráfagas continuas de peticiones.
+* **Desafío técnico:** El backend del SISAP procesa los rangos mensuales de forma matricial y su infraestructura sufre intermitencias (*Read Timeouts*). Además, el firewall del MIDAGRI aplica bloqueos perimetrales (*Max retries exceeded*) si recibe solicitudes masivas con los 51 productos en un solo milisegundo desde los servidores corporativos de GitHub Actions.
 
-* **Solución implementada:** Se diseñó una extracción iterativa secuencial día por día. Esto garantiza archivos `.html` independientes por fecha, facilita de forma nativa auditorías puntuales y asegura la tolerancia a fallos en cargas históricas masivas.
+* **Solución implementada:** Se diseñó una extracción secuencial día por día que, a su vez, segmenta el catálogo maestro en lotes pequeños de 5 productos por petición. Se introdujo una pausa de cortesía de 2.5 segundos entre cada ráfaga para camuflar la velocidad de la nube, emular el comportamiento de un usuario real y mantener el canal de red abierto de forma segura.
 
 ### 2. Simulación de Navegador y Regla de Rango Indexado Estricto
 
@@ -38,11 +38,13 @@ Este componente automatiza la recolección diaria de datos macro de precios de l
 
 Utiliza un filtro optimizado por comprensión de listas (`len(cid) == 4`) para inyectar exclusivamente los identificadores de categorías macro (Padres). Esto reduce sustancialmente el tamaño de la cadena de consulta HTTP y automatiza el mapeo inverso de datos.
 
-### 2. Orquestador de Descarga (`observatorio/ingesta/sisap/run_ingesta_sisap.py`)
+### 2. Orquestador de Descarga Resiliente (`observatorio/ingesta/sisap/run_ingesta_sisap.py`)
 
 * **Sincronización Horaria:** Sincroniza la zona horaria restando automáticamente 5 horas al reloj del servidor de GitHub (`UTC-0` a `UTC-5` Perú).
-* **Inyección de Parámetros:** Estructura los parámetros mutables y los inyecta en formato de tuplas para simular de forma idéntica las solicitudes del navegador mediante la librería `requests`.
-* **Calidad de Datos:** Controla la calidad de datos (*Data Quality*) imprimiendo un preview visual en consola y forzando una salida de error (`sys.exit(1)`) si el servidor devuelve respuestas anómalas o vacías, notificando el fallo de inmediato a GitHub Actions.
+
+* **Procesamiento en Batch:** Implementa un generador dinámico para dividir los IDs de `config.py` en sub-listas de tamaño controlado, realizando peticiones HTTP distribuidas con límites de espera independientes para conexión (10s) y lectura (30s).
+
+* **Consolidación Cruda:** Unifica las respuestas de todos los lotes válidos en un único string de texto antes de escribir el archivo final en el disco virtual, previniendo la pérdida de datos si un grupo específico de alimentos no reporta precios.
 
 ---
 
@@ -53,8 +55,10 @@ El archivo `.github/workflows/ingesta-sisap.yml` levanta un entorno virtual aisl
 ### Especificaciones del Workflow
 
 * **Frecuencia (Cron):** Configurado para ejecutarse de forma autónoma a las **13:00 PM UTC** (8:00 AM hora de Perú) todos los días, ventana horaria ideal para capturar las actualizaciones matutinas de los mercados regionales.
+
 * **Workflow Dispatch:** Permite ejecuciones manuales bajo demanda desde la pestaña *Actions* de la interfaz web de GitHub para auditorías rápidas en frío.
-* **Persistencia Temporal (Artefactos):** Los archivos crudos HTML recolectados por el runner se empaquetan y almacenan en la nube de GitHub como artefactos descargables (`snapshot-sisap-html`) con una política de retención segura de 3 días antes de su limpieza automática.
+
+* **Persistencia Garantizada (Artefactos):** Una vez que el orquestador finaliza la descarga de todos los lotes secuenciales, la carpeta de persistencia `output_bronze_sisap/` se genera de manera limpia en el runner. El workflow empaqueta este HTML consolidado y lo almacena como un artefactos descargable (`snapshot-sisap-html`) con una retención de 3 días.
 
 ---
 
