@@ -31,6 +31,7 @@ from .categorias import categorias_a_navegar
 from .client import HEADERS, buscar
 from .models import ProductoPrecio
 from .parser import aplanar
+from .relevancia import es_alimento
 
 log = logging.getLogger("marketplace")
 LIMA = timezone(timedelta(hours=-5))
@@ -64,8 +65,13 @@ def recolectar(
             if pid in vistos:
                 continue
             vistos.add(pid)
-            crudos.append(p)
-            filas.extend(aplanar(p, fecha_captura=fecha, consulta=etiqueta))
+            crudos.append(p)  # raw (bronze) conserva todo
+            # el CSV aplanado se queda solo con alimentos; el raw mantiene todo
+            filas.extend(
+                f
+                for f in aplanar(p, fecha_captura=fecha, consulta=etiqueta)
+                if es_alimento(f.categoria)
+            )
             nuevos += 1
         log.info("%s -> %d productos (%d nuevos)", etiqueta, len(productos), nuevos)
     return crudos, filas

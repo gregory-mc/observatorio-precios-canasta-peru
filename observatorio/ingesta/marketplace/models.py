@@ -21,7 +21,7 @@ class ProductoPrecio:
     sku_id: str
     nombre: str
     marca: str | None
-    categoria: str | None  # primera ruta de categoría, ej. "Abarrotes/Arroz"
+    categoria: str | None  # ruta completa de categoría, ej. "Abarrotes/Arroz/Arroz Extra"
     categoria_raiz: str | None  # raíz de la categoría, ej. "Abarrotes" (filtro de relevancia)
     ean: str | None
     unidad_medida: str  # measurementUnit: "un", "kg", "lt", ...
