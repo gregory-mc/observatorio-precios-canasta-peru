@@ -29,8 +29,9 @@ jobs:
     - name: 🛰️ Ejecutar Script de Ingesta Diaria
       # 🟢 Si el MIDAGRI está caído, el workflow no se romperá de forma agresiva
       continue-on-error: true
+      shell: powershell
       run: |
-        export PYTHONPATH="${{ github.workspace }}"
+        $env:PYTHONPATH = "${{ github.workspace }}"
         python observatorio/ingesta/sisap/run_ingesta_sisap.py
 
     - name: 📦 Almacenar HTML Crudo como Artefacto de GitHub
