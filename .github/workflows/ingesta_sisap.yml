@@ -30,6 +30,8 @@ jobs:
       # 🟢 Si el MIDAGRI está caído, el workflow no se romperá de forma agresiva
       continue-on-error: true
       shell: powershell
+      env:
+        PYTHONUTF8: "1"
       run: |
         $env:PYTHONPATH = "${{ github.workspace }}"
         python observatorio/ingesta/sisap/run_ingesta_sisap.py
