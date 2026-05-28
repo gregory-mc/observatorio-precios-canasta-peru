@@ -20,9 +20,11 @@ Este componente automatiza la recolección diaria de datos macro de precios de l
 
 * **Solución implementada:** Se diseñó una extracción iterativa secuencial día por día. Esto garantiza archivos `.html` independientes por fecha, facilita de forma nativa auditorías puntuales y asegura la tolerancia a fallos en cargas históricas masivas.
 
-### 2. Simulación de Navegador y Regla de Rango Indexado
+### 2. Simulación de Navegador y Regla de Rango Indexado Estricto
 
-* **Anatomía de la URL:** Se descubrió que el backend AJAX parcial del MIDAGRI requiere obligatoriamente que el parámetro `desde` apunte al **primer día del mes actual consultado** y `hasta` mapee al menos el día posterior, de lo contrario devuelve esquemas de tablas vacíos. El orquestador de producción (`run_ingesta_sisap.py`) calcula dinámicamente estas variables adaptándose a la zona horaria de ejecución.
+* **Anatomía de la URL:** Se descubrió que el backend AJAX parcial del MIDAGRI requiere obligatoriamente que el parámetro `desde` apunte al **primer día del mes actual consultado**. 
+
+* **Control de Borde Superior:** Inicialmente se evaluó calcular el parámetro `hasta` sumando un día hacia el futuro para cerrar el rango. Sin embargo, las pruebas empíricas demostraron que consultar fechas futuras provoca que el backend del SISAP colapse internamente y devuelva un HTML limpio pero sin filas de datos (`tabla vacía`). Para solucionar esto, el orquestador de producción ajusta estrictamente los parámetros `fecha` y `hasta` apuntando en sincronía al día de hoy.
 
 ### 3. Modularización y Simetría del Monorepo
 
@@ -50,7 +52,7 @@ El archivo `.github/workflows/ingesta-sisap.yml` levanta un entorno virtual aisl
 
 ### Especificaciones del Workflow
 
-* **Frecuencia (Cron):** Configurado para ejecutarse de forma autónoma a las **07:30 AM UTC** (02:30 AM hora de Perú) todos los días, ventana horaria ideal para capturar las actualizaciones matutinas de los mercados regionales.
+* **Frecuencia (Cron):** Configurado para ejecutarse de forma autónoma a las **13:00 PM UTC** (8:00 AM hora de Perú) todos los días, ventana horaria ideal para capturar las actualizaciones matutinas de los mercados regionales.
 * **Workflow Dispatch:** Permite ejecuciones manuales bajo demanda desde la pestaña *Actions* de la interfaz web de GitHub para auditorías rápidas en frío.
 * **Persistencia Temporal (Artefactos):** Los archivos crudos HTML recolectados por el runner se empaquetan y almacenan en la nube de GitHub como artefactos descargables (`snapshot-sisap-html`) con una política de retención segura de 3 días antes de su limpieza automática.
 

@@ -3,10 +3,10 @@ name: Cron Diario - Ingesta Bronze SISAP
 
 on:
   schedule:
-    # ⏰ Corre de forma automática a las 07:30 AM UTC (02:30 AM hora de Perú)
-    - cron: '30 7 * * *'
+    # ⏰ Corre de forma automática a las 13:00 PM UTC (08:00 AM hora de Perú) todos los días
+    - cron: '00 13 * * *'
   workflow_dispatch:
-    # 🚀 Activa el botón gris en la interfaz web de GitHub para pruebas manuales
+    # 🚀 Permite activarlo manualmente desde GitHub web
 
 jobs:
   ejecutar_ingesta:
@@ -26,9 +26,10 @@ jobs:
         python -m pip install --upgrade pip
         pip install requests beautifulsoup4
 
-    - name: 🛰️ Ejecutar Script del SISAP
+    - name: 🛰️ Ejecutar Script de Ingesta Diaria
+      # 🟢 Si el MIDAGRI está caído, el workflow no se romperá de forma agresiva
+      continue-on-error: true
       run: |
-        # Seteamos el PYTHONPATH para que Python reconozca la raíz del monorepo al importar
         export PYTHONPATH="${{ github.workspace }}"
         python observatorio/ingesta/sisap/run_ingesta_sisap.py
 
