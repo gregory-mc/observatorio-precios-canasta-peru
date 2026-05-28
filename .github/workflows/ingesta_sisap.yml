@@ -3,14 +3,14 @@ name: Cron Diario - Ingesta Bronze SISAP
 
 on:
   schedule:
-    # ⏰ Corre de forma automática a las 13:00 PM UTC (08:00 AM hora de Perú) todos los días
-    - cron: '00 13 * * *'
+    # ⏰ Corre de forma automática a las 15:30 UTC (10:30 AM hora de Perú) todos los días
+    - cron: '30 15 * * *'
   workflow_dispatch:
     # 🚀 Permite activarlo manualmente desde GitHub web
 
 jobs:
   ejecutar_ingesta:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
     - name: 📥 Clonar el Repositorio
