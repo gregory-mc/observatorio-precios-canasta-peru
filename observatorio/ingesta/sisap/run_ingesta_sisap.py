@@ -1,102 +1,174 @@
 # observatorio/ingesta/sisap/run_ingesta_sisap.py
 
+import csv
 import os
 import sys
 import requests
+from dataclasses import asdict, fields
 from datetime import datetime, timedelta
+from pathlib import Path
 from bs4 import BeautifulSoup
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
-# Importación absoluta del monorepo
 from observatorio.ingesta.sisap.config import PRODUCTOS_CANASTA_BASICA
+from observatorio.ingesta.sisap.models import PrecioSisap
+from observatorio.ingesta.sisap.parser import parsear_html
 
 URL_SISAP = "http://sistemas.midagri.gob.pe/sisap/portal2/ciudades/resumenes/filtrar"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "es-ES,es;q=0.8"
+    "Accept-Language": "es-ES,es;q=0.8",
 }
 
-def configurar_sesion_resiliente():
-    """Configura una sesión con reintentos automáticos e incrementos de tiempo."""
+# (tipo_mercado, variable SISAP)
+TIPOS_MERCADO = [
+    ("minorista", "min_precio_prom"),
+    ("mayorista", "may_precio_prom"),
+]
+
+
+def configurar_sesion_resiliente() -> requests.Session:
+    """Sesión HTTP con reintentos automáticos ante errores 5xx del servidor estatal."""
     session = requests.Session()
-    estrategia_reintentos = Retry(
+    estrategia = Retry(
         total=3,
         backoff_factor=2,
         status_forcelist=[500, 502, 503, 504],
-        raise_on_status=False
+        raise_on_status=False,
     )
-    adaptador = HTTPAdapter(max_retries=estrategia_reintentos)
+    adaptador = HTTPAdapter(max_retries=estrategia)
     session.mount("http://", adaptador)
     session.mount("https://", adaptador)
     return session
 
-def ejecutar_ingesta_diaria():
+
+def escribir_csv(filas: list[PrecioSisap], ruta: Path) -> None:
+    """Escribe la lista de PrecioSisap como CSV con encabezado."""
+    columnas = [f.name for f in fields(PrecioSisap)]
+    with ruta.open("w", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(fh, fieldnames=columnas)
+        writer.writeheader()
+        for fila in filas:
+            writer.writerow(asdict(fila))
+
+
+def subir_a_r2(ruta_local: Path, clave_r2: str) -> None:
+    """Sube un archivo a Cloudflare R2 via boto3 (S3-compatible).
+
+    Si las variables de entorno R2_* no están configuradas (desarrollo local),
+    omite la subida con un aviso sin fallar.
+    """
+    endpoint  = os.getenv("R2_ENDPOINT")
+    access_key = os.getenv("R2_ACCESS_KEY_ID")
+    secret_key = os.getenv("R2_SECRET_ACCESS_KEY")
+    bucket    = os.getenv("R2_BUCKET")
+
+    if not all([endpoint, access_key, secret_key, bucket]):
+        print("⚠️  R2 no configurado — se omite la subida a la nube (desarrollo local).")
+        return
+
+    import boto3
+    from botocore.config import Config
+
+    s3 = boto3.client(
+        "s3",
+        endpoint_url=endpoint,
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
+        config=Config(signature_version="s3v4"),
+        region_name="auto",
+    )
+    content_type = "text/html" if ruta_local.suffix == ".html" else "text/csv"
+    s3.upload_file(str(ruta_local), bucket, clave_r2, ExtraArgs={"ContentType": content_type})
+    print(f"☁️  Subido a R2: {clave_r2}")
+
+
+def ejecutar_ingesta_diaria() -> None:
     # Sincronización horaria con Perú (UTC-5)
     hora_peru = datetime.utcnow() - timedelta(hours=5)
-
-    str_fecha = hora_peru.strftime("%d/%m/%Y")
+    str_fecha  = hora_peru.strftime("%d/%m/%Y")
     str_archivo = hora_peru.strftime("%Y-%m-%d")
+    str_desde  = hora_peru.replace(day=1).strftime("%d/%m/%Y")
+    str_hasta  = str_fecha
 
-    str_desde = hora_peru.replace(day=1).strftime("%d/%m/%Y")
-    str_hasta = str_fecha
-
-    print(f"🚀 Iniciando Pipeline Bronze - SISAP")
+    print(f"🚀 Iniciando Pipeline Bronze - SISAP (minorista + mayorista)")
     print(f"📅 Fecha objetivo Perú: {str_fecha}")
-    print(f"📊 Parámetros indexados: Desde {str_desde} hasta {str_hasta}")
-    print(f"📦 Enviando {len(PRODUCTOS_CANASTA_BASICA)} productos en un único request al MIDAGRI...")
+    print(f"📊 Parámetros: Desde {str_desde} hasta {str_hasta}")
+    print(f"📦 {len(PRODUCTOS_CANASTA_BASICA)} productos por request")
 
-    params = {
-        "region": "150000",
-        "variables[]": "min_precio_prom",
-        "fecha": str_fecha,
-        "desde": str_desde,
-        "hasta": str_hasta,
-        "anios[]": hora_peru.strftime("%Y"),
-        "meses[]": hora_peru.strftime("%m"),
-        "periodicidad": "dia",
-        "__ajax_carga_final": "consulta",
-        "ajax": "true"
-    }
+    # Carpetas de salida locales
+    base    = Path(__file__).parent / "output_bronze_sisap"
+    raw_dir = base / "raw"
+    raw_dir.mkdir(parents=True, exist_ok=True)
 
     payload_productos = [("productos[]", pid) for pid in PRODUCTOS_CANASTA_BASICA]
-    mix_params = list(params.items()) + payload_productos
-
-    ruta_salida = os.path.join(os.path.dirname(__file__), "output_bronze_sisap")
-    os.makedirs(ruta_salida, exist_ok=True)
-
     cliente = configurar_sesion_resiliente()
+    total_exitosos = 0
 
-    try:
-        response = cliente.get(URL_SISAP, params=mix_params, headers=HEADERS, timeout=(15, 45))
-        response.raise_for_status()
+    for tipo_mercado, variable in TIPOS_MERCADO:
+        print(f"\n📡 Solicitando precios {tipo_mercado.upper()}...")
 
-        soup = BeautifulSoup(response.text, 'html.parser')
-        filas = soup.find_all('tr', class_='contenido')
+        params = {
+            "region": "150000",
+            "variables[]": variable,
+            "fecha": str_fecha,
+            "desde": str_desde,
+            "hasta": str_hasta,
+            "anios[]": hora_peru.strftime("%Y"),
+            "meses[]": hora_peru.strftime("%m"),
+            "periodicidad": "dia",
+            "__ajax_carga_final": "consulta",
+            "ajax": "true",
+        }
+        mix_params = list(params.items()) + payload_productos
 
-        if filas:
-            nombre_archivo = f"{str_archivo}_sisap_lima.html"
-            ruta_completa = os.path.join(ruta_salida, nombre_archivo)
+        try:
+            response = cliente.get(URL_SISAP, params=mix_params, headers=HEADERS, timeout=(15, 45))
+            response.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            print(f"🚨 Error de conexión en {tipo_mercado}: {e}")
+            continue
 
-            with open(ruta_completa, "w", encoding="utf-8") as f:
-                f.write(response.text)
+        # Guardar HTML raw (bronze inmutable)
+        nombre_html = f"{str_archivo}_sisap_lima_{tipo_mercado}.html"
+        ruta_html   = raw_dir / nombre_html
+        ruta_html.write_text(response.text, encoding="utf-8")
 
-            print(f"✅ ¡Descarga completada de forma exitosa!")
-            print(f"💾 Archivo Bronze guardado: {nombre_archivo} ({len(filas)} filas)")
+        # Parsear HTML → filas estructuradas
+        filas = parsear_html(response.text, fecha_captura=str_archivo, tipo_mercado=tipo_mercado)
+        filas_con_precio = [f for f in filas if f.precio_prom is not None]
 
-            print("\n🔍 Muestra de control visual (Data Quality):")
-            for fila in filas[:3]:
-                columnas = fila.find_all('td')
-                if columnas:
-                    print(f"  -> 📦 {columnas[0].text.strip():<35} | 💰 S/. {columnas[3].text.strip()}")
-        else:
-            print(f"⚠️ El servidor respondió con éxito pero la tabla vino vacía.")
-            print(f"ℹ️ Diagnóstico: Parámetros validados. Aún no hay actualización pública en el SISAP a esta hora.")
+        if not filas:
+            print(f"⚠️  Tabla vacía en {tipo_mercado} — sin datos publicados aún.")
+            continue
 
-    except requests.exceptions.RequestException as e:
-        print(f"🚨 Error crítico insuperable tras agotar la política de reintentos: {e}")
+        # Escribir CSV
+        nombre_csv = f"{str_archivo}_sisap_lima_{tipo_mercado}.csv"
+        ruta_csv   = base / nombre_csv
+        escribir_csv(filas, ruta_csv)
+
+        print(f"✅ {tipo_mercado.capitalize()}: {len(filas_con_precio)}/{len(filas)} productos con precio")
+        print(f"💾 HTML raw: raw/{nombre_html}")
+        print(f"💾 CSV: {nombre_csv}")
+
+        # Data Quality preview
+        print(f"🔍 Muestra {tipo_mercado}:")
+        for fila in [f for f in filas if f.precio_prom is not None][:3]:
+            print(f"  -> 📦 {fila.producto:<40} | 💰 S/. {fila.precio_prom}")
+
+        # Subir a R2
+        subir_a_r2(ruta_html, f"sisap/raw/{nombre_html}")
+        subir_a_r2(ruta_csv, f"sisap/{nombre_csv}")
+
+        total_exitosos += 1
+
+    print(f"\n🏁 Pipeline finalizado: {total_exitosos}/2 requests exitosos.")
+    if total_exitosos == 0:
+        print("🚨 Sin datos en ningún mercado — verificar disponibilidad del SISAP.")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     ejecutar_ingesta_diaria()

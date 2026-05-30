@@ -24,7 +24,7 @@ jobs:
     - name: 🛠️ Instalar Dependencias (Pip Tradicional)
       run: |
         python -m pip install --upgrade pip
-        pip install requests beautifulsoup4
+        pip install requests beautifulsoup4 boto3
 
     - name: 🛰️ Ejecutar Script de Ingesta Diaria
       # 🟢 Si el MIDAGRI está caído, el workflow no se romperá de forma agresiva
@@ -32,13 +32,17 @@ jobs:
       shell: powershell
       env:
         PYTHONUTF8: "1"
+        R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+        R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+        R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        R2_BUCKET: ${{ secrets.R2_BUCKET }}
       run: |
         $env:PYTHONPATH = "${{ github.workspace }}"
         python observatorio/ingesta/sisap/run_ingesta_sisap.py
 
-    - name: 📦 Almacenar HTML Crudo como Artefacto de GitHub
+    - name: 📦 Almacenar Snapshot como Artefacto de GitHub
       uses: actions/upload-artifact@v4
       with:
-        name: snapshot-sisap-html
+        name: snapshot-sisap
         path: observatorio/ingesta/sisap/output_bronze_sisap/
         retention-days: 3
