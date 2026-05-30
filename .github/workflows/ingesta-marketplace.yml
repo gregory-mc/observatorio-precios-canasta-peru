@@ -30,7 +30,32 @@ jobs:
           path: data/bronze/marketplace/
           retention-days: 14
 
-      # TODO(S2): subir raw/<fecha>.json a Cloudflare R2 (bronze inmutable)
-      #           y cargar el CSV a Supabase Postgres (schema bronze).
-      # TODO(S2): alerta "sin inserciones hoy". Hoy el job falla si scrape.py
-      #           devuelve exit 1 (0 filas), y GitHub notifica el fallo por email.
+      # Sube el snapshot del día a Cloudflare R2 (bronze inmutable).
+      # Solo corre si el scrape salió OK (filas > 0); si scrape.py devuelve
+      # exit 1 el job falla aquí y GitHub avisa por email.
+      # Requiere estos secrets del repo (Settings > Secrets and variables > Actions):
+      #   R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ENDPOINT, R2_BUCKET
+      # R2_ENDPOINT con la forma https://<account_id>.r2.cloudflarestorage.com
+      - name: Subir snapshot a Cloudflare R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          # aws-cli v2.23+ exige checksums CRC que R2 no soporta; lo relajamos.
+          AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+          AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+        run: |
+          set -euo pipefail
+          FECHA=$(date -u -d '-5 hours' +%F)  # fecha en hora Lima (UTC-5), igual que scrape.py
+          aws s3 cp "data/bronze/marketplace/raw/${FECHA}.json" \
+            "s3://${R2_BUCKET}/marketplace/raw/${FECHA}.json" \
+            --endpoint-url "$R2_ENDPOINT" --content-type application/json
+          aws s3 cp "data/bronze/marketplace/${FECHA}.csv" \
+            "s3://${R2_BUCKET}/marketplace/${FECHA}.csv" \
+            --endpoint-url "$R2_ENDPOINT" --content-type text/csv
+          echo "Subido a R2: marketplace/raw/${FECHA}.json y marketplace/${FECHA}.csv"
+
+      # TODO(S2): cargar el CSV a Supabase Postgres (schema bronze).
+      # TODO(S2): alerta "sin inserciones hoy" más allá del fallo por email.
