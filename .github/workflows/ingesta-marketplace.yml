@@ -30,7 +30,7 @@ jobs:
           path: data/bronze/marketplace/
           retention-days: 14
 
-      # Sube el snapshot del día a Cloudflare R2 (bronze inmutable).
+      # Sube el CSV aplanado del día a Cloudflare R2.
       # Solo corre si el scrape salió OK (filas > 0); si scrape.py devuelve
       # exit 1 el job falla aquí y GitHub avisa por email.
       # Requiere estos secrets del repo (Settings > Secrets and variables > Actions):
@@ -49,13 +49,10 @@ jobs:
         run: |
           set -euo pipefail
           FECHA=$(date -u -d '-5 hours' +%F)  # fecha en hora Lima (UTC-5), igual que scrape.py
-          aws s3 cp "data/bronze/marketplace/raw/${FECHA}.json" \
-            "s3://${R2_BUCKET}/marketplace/raw/${FECHA}.json" \
-            --endpoint-url "$R2_ENDPOINT" --content-type application/json
           aws s3 cp "data/bronze/marketplace/${FECHA}.csv" \
             "s3://${R2_BUCKET}/marketplace/${FECHA}.csv" \
             --endpoint-url "$R2_ENDPOINT" --content-type text/csv
-          echo "Subido a R2: marketplace/raw/${FECHA}.json y marketplace/${FECHA}.csv"
+          echo "Subido a R2: marketplace/${FECHA}.csv"
 
       # TODO(S2): cargar el CSV a Supabase Postgres (schema bronze).
       # TODO(S2): alerta "sin inserciones hoy" más allá del fallo por email.
