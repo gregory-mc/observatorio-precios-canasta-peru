@@ -7,7 +7,6 @@ import requests
 from dataclasses import asdict, fields
 from datetime import datetime, timedelta
 from pathlib import Path
-from bs4 import BeautifulSoup
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
@@ -80,8 +79,7 @@ def subir_a_r2(ruta_local: Path, clave_r2: str) -> None:
         config=Config(signature_version="s3v4"),
         region_name="auto",
     )
-    content_type = "text/html" if ruta_local.suffix == ".html" else "text/csv"
-    s3.upload_file(str(ruta_local), bucket, clave_r2, ExtraArgs={"ContentType": content_type})
+    s3.upload_file(str(ruta_local), bucket, clave_r2, ExtraArgs={"ContentType": "text/csv"})
     print(f"☁️  Subido a R2: {clave_r2}")
 
 
@@ -98,10 +96,9 @@ def ejecutar_ingesta_diaria() -> None:
     print(f"📊 Parámetros: Desde {str_desde} hasta {str_hasta}")
     print(f"📦 {len(PRODUCTOS_CANASTA_BASICA)} productos por request")
 
-    # Carpetas de salida locales
-    base    = Path(__file__).parent / "output_bronze_sisap"
-    raw_dir = base / "raw"
-    raw_dir.mkdir(parents=True, exist_ok=True)
+    # Carpeta de salida local
+    base = Path(__file__).parent / "output_bronze_sisap"
+    base.mkdir(parents=True, exist_ok=True)
 
     payload_productos = [("productos[]", pid) for pid in PRODUCTOS_CANASTA_BASICA]
     cliente = configurar_sesion_resiliente()
@@ -131,11 +128,6 @@ def ejecutar_ingesta_diaria() -> None:
             print(f"🚨 Error de conexión en {tipo_mercado}: {e}")
             continue
 
-        # Guardar HTML raw (bronze inmutable)
-        nombre_html = f"{str_archivo}_sisap_lima_{tipo_mercado}.html"
-        ruta_html   = raw_dir / nombre_html
-        ruta_html.write_text(response.text, encoding="utf-8")
-
         # Parsear HTML → filas estructuradas
         filas = parsear_html(response.text, fecha_captura=str_archivo, tipo_mercado=tipo_mercado)
         filas_con_precio = [f for f in filas if f.precio_prom is not None]
@@ -150,7 +142,6 @@ def ejecutar_ingesta_diaria() -> None:
         escribir_csv(filas, ruta_csv)
 
         print(f"✅ {tipo_mercado.capitalize()}: {len(filas_con_precio)}/{len(filas)} productos con precio")
-        print(f"💾 HTML raw: raw/{nombre_html}")
         print(f"💾 CSV: {nombre_csv}")
 
         # Data Quality preview
@@ -158,8 +149,7 @@ def ejecutar_ingesta_diaria() -> None:
         for fila in [f for f in filas if f.precio_prom is not None][:3]:
             print(f"  -> 📦 {fila.producto:<40} | 💰 S/. {fila.precio_prom}")
 
-        # Subir a R2
-        subir_a_r2(ruta_html, f"sisap/raw/{nombre_html}")
+        # Subir CSV a R2
         subir_a_r2(ruta_csv, f"sisap/{nombre_csv}")
 
         total_exitosos += 1
