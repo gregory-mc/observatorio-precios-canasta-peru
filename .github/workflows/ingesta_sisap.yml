@@ -16,6 +16,7 @@ jobs:
   ejecutar_ingesta:
     runs-on: self-hosted
     permissions:
+      contents: read
       issues: write
 
     steps:
