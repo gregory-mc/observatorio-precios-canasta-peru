@@ -6,11 +6,18 @@ on:
     # ⏰ Corre de forma automática a las 19:00 UTC (02:00 PM hora de Perú) todos los días
     - cron: '00 19 * * *'
   workflow_dispatch:
-    # 🚀 Permite activarlo manualmente desde GitHub web
+    inputs:
+      simular_fallo:
+        description: 'Forzar fallo para probar la alerta (true/false)'
+        required: false
+        default: 'false'
 
 jobs:
   ejecutar_ingesta:
     runs-on: self-hosted
+    permissions:
+      contents: read
+      issues: write
 
     steps:
     - name: 📥 Clonar el Repositorio
@@ -27,11 +34,10 @@ jobs:
         pip install requests beautifulsoup4 boto3
 
     - name: 🛰️ Ejecutar Script de Ingesta Diaria
-      # 🟢 Si el MIDAGRI está caído, el workflow no se romperá de forma agresiva
-      continue-on-error: true
       shell: powershell
       env:
         PYTHONUTF8: "1"
+        SIMULAR_FALLO: ${{ github.event.inputs.simular_fallo || 'false' }}
         R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
         R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
         R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
@@ -46,3 +52,27 @@ jobs:
         name: snapshot-sisap
         path: observatorio/ingesta/sisap/output_bronze_sisap/
         retention-days: 3
+
+    - name: 🚨 Crear issue de alerta por fallo
+      if: failure()
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      shell: powershell
+      run: |
+        $fechaLima = (Get-Date).ToUniversalTime().AddHours(-5).ToString("yyyy-MM-dd")
+        $titulo = "ALERTA [SISAP] Fallo de ingesta $fechaLima"
+        $runUrl = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        $lineas = @(
+          "## Fallo detectado en ingesta SISAP",
+          "",
+          "El workflow **${{ github.workflow }}** fallo el $fechaLima.",
+          "",
+          "**Detalles:**",
+          "- Runner: ${{ runner.name }}",
+          "- Run: $runUrl",
+          "",
+          "> Issue auto-creado por GitHub Actions - revisar logs del run para diagnostico."
+        )
+        $bodyFile = Join-Path $env:RUNNER_TEMP "alerta_sisap.txt"
+        $lineas | Out-File -FilePath $bodyFile -Encoding utf8
+        gh issue create --title $titulo --body-file $bodyFile --label "area:devops"

@@ -3,11 +3,19 @@ name: Ingesta Marketplace
 on:
   schedule:
     - cron: "0 9 * * *" # 04:00 America/Lima (UTC-5)
-  workflow_dispatch: {} # permite dispararlo a mano desde la pestaña Actions
+  workflow_dispatch:
+    inputs:
+      simular_fallo:
+        description: 'Forzar fallo para probar la alerta (true/false)'
+        required: false
+        default: 'false'
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
     steps:
       - uses: actions/checkout@v4
 
@@ -21,6 +29,8 @@ jobs:
         run: pip install -e ".[ingesta]"
 
       - name: Scrapear precios de Marketplace
+        env:
+          SIMULAR_FALLO: ${{ github.event.inputs.simular_fallo || 'false' }}
         run: python -m observatorio.ingesta.marketplace.scrape --salida data/bronze
 
       - name: Guardar snapshot como artifact
@@ -55,4 +65,21 @@ jobs:
           echo "Subido a R2: marketplace/${FECHA}.csv"
 
       # TODO(S2): cargar el CSV a Supabase Postgres (schema bronze).
-      # TODO(S2): alerta "sin inserciones hoy" más allá del fallo por email.
+
+      - name: 🚨 Crear issue de alerta por fallo
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --title "🚨 [Marketplace] Fallo de ingesta $(date -u -d '-5 hours' +%Y-%m-%d)" \
+            --body "## Fallo detectado en ingesta Marketplace
+
+          El workflow **${{ github.workflow }}** falló el $(date -u -d '-5 hours' +%F).
+
+          **Detalles:**
+          - Runner: \`${{ runner.name }}\`
+          - Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          > Issue auto-creado por GitHub Actions — revisar logs del run para diagnóstico." \
+            --label "area:devops"

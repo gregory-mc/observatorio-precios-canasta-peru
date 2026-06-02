@@ -84,6 +84,11 @@ def subir_a_r2(ruta_local: Path, clave_r2: str) -> None:
 
 
 def ejecutar_ingesta_diaria() -> None:
+    # Modo de prueba: fuerza fallo intencional para verificar que la alerta funciona
+    if os.getenv("SIMULAR_FALLO", "false").lower() == "true":
+        print("🧪 SIMULAR_FALLO=true — forzando fallo intencional para prueba de alertas.")
+        sys.exit(1)
+
     # Sincronización horaria con Perú (UTC-5)
     hora_peru = datetime.utcnow() - timedelta(hours=5)
     str_fecha  = hora_peru.strftime("%d/%m/%Y")
@@ -103,6 +108,7 @@ def ejecutar_ingesta_diaria() -> None:
     payload_productos = [("productos[]", pid) for pid in PRODUCTOS_CANASTA_BASICA]
     cliente = configurar_sesion_resiliente()
     total_exitosos = 0
+    mercados_fallidos: list[str] = []  # registra cada mercado que no produjo datos
 
     for tipo_mercado, variable in TIPOS_MERCADO:
         print(f"\n📡 Solicitando precios {tipo_mercado.upper()}...")
@@ -126,6 +132,7 @@ def ejecutar_ingesta_diaria() -> None:
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
             print(f"🚨 Error de conexión en {tipo_mercado}: {e}")
+            mercados_fallidos.append(tipo_mercado)
             continue
 
         # Parsear HTML → filas estructuradas
@@ -134,7 +141,12 @@ def ejecutar_ingesta_diaria() -> None:
 
         if not filas:
             print(f"⚠️  Tabla vacía en {tipo_mercado} — sin datos publicados aún.")
+            mercados_fallidos.append(tipo_mercado)
             continue
+
+        # Data quality: tabla con filas pero ningún precio disponible
+        if not filas_con_precio:
+            print(f"⚠️  {tipo_mercado.capitalize()}: tabla con {len(filas)} filas pero 0 precios disponibles.")
 
         # Escribir CSV
         nombre_csv = f"{str_archivo}_sisap_lima_{tipo_mercado}.csv"
@@ -154,9 +166,11 @@ def ejecutar_ingesta_diaria() -> None:
 
         total_exitosos += 1
 
-    print(f"\n🏁 Pipeline finalizado: {total_exitosos}/2 requests exitosos.")
-    if total_exitosos == 0:
-        print("🚨 Sin datos en ningún mercado — verificar disponibilidad del SISAP.")
+    total_mercados = len(TIPOS_MERCADO)
+    print(f"\n🏁 Pipeline finalizado: {total_exitosos}/{total_mercados} requests exitosos.")
+    if mercados_fallidos:
+        print(f"🚨 Mercados con fallo: {', '.join(mercados_fallidos)}")
+        print("   → Verificar disponibilidad del SISAP o conexión del runner.")
         sys.exit(1)
 
 
