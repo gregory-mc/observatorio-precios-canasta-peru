@@ -6,7 +6,11 @@ on:
     # ⏰ Corre de forma automática a las 19:00 UTC (02:00 PM hora de Perú) todos los días
     - cron: '00 19 * * *'
   workflow_dispatch:
-    # 🚀 Permite activarlo manualmente desde GitHub web
+    inputs:
+      simular_fallo:
+        description: 'Forzar fallo para probar la alerta (true/false)'
+        required: false
+        default: 'false'
 
 jobs:
   ejecutar_ingesta:
@@ -27,11 +31,10 @@ jobs:
         pip install requests beautifulsoup4 boto3
 
     - name: 🛰️ Ejecutar Script de Ingesta Diaria
-      # 🟢 Si el MIDAGRI está caído, el workflow no se romperá de forma agresiva
-      continue-on-error: true
       shell: powershell
       env:
         PYTHONUTF8: "1"
+        SIMULAR_FALLO: ${{ github.event.inputs.simular_fallo || 'false' }}
         R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
         R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
         R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
@@ -46,3 +49,22 @@ jobs:
         name: snapshot-sisap
         path: observatorio/ingesta/sisap/output_bronze_sisap/
         retention-days: 3
+
+    - name: 🚨 Crear issue de alerta por fallo
+      if: failure()
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      shell: bash
+      run: |
+        gh issue create \
+          --title "🚨 [SISAP] Fallo de ingesta $(date -u -d '-5 hours' +%Y-%m-%d)" \
+          --body "## Fallo detectado en ingesta SISAP
+
+        El workflow **${{ github.workflow }}** falló el $(date -u -d '-5 hours' +%F).
+
+        **Detalles:**
+        - Runner: \`${{ runner.name }}\`
+        - Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+        > Issue auto-creado por GitHub Actions — revisar logs del run para diagnóstico." \
+          --label "area:devops"

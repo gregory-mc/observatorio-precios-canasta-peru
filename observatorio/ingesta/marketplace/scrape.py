@@ -97,6 +97,13 @@ def escribir(crudos: list[dict], filas: list[ProductoPrecio], salida: Path, *, f
 
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+
+    # Modo de prueba: fuerza fallo intencional para verificar que la alerta funciona
+    import os
+    if os.getenv("SIMULAR_FALLO", "false").lower() == "true":
+        log.error("SIMULAR_FALLO=true — forzando fallo intencional para prueba de alertas.")
+        return 1
+
     ap = argparse.ArgumentParser(description="Scraper del catálogo de alimentos de Marketplace")
     ap.add_argument("--salida", type=Path, default=Path("data/bronze"))
     ap.add_argument("--limite", type=int, default=None, help="Máx SKUs por categoría (debug).")
