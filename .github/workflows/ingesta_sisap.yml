@@ -54,17 +54,9 @@ jobs:
       if: failure()
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      shell: bash
+      shell: powershell
       run: |
-        gh issue create \
-          --title "🚨 [SISAP] Fallo de ingesta $(date -u -d '-5 hours' +%Y-%m-%d)" \
-          --body "## Fallo detectado en ingesta SISAP
-
-        El workflow **${{ github.workflow }}** falló el $(date -u -d '-5 hours' +%F).
-
-        **Detalles:**
-        - Runner: \`${{ runner.name }}\`
-        - Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-        > Issue auto-creado por GitHub Actions — revisar logs del run para diagnóstico." \
-          --label "area:devops"
+        $fechaLima = (Get-Date).ToUniversalTime().AddHours(-5).ToString("yyyy-MM-dd")
+        $titulo = "🚨 [SISAP] Fallo de ingesta $fechaLima"
+        $cuerpo = "## Fallo detectado en ingesta SISAP`n`nEl workflow **${{ github.workflow }}** falló el $fechaLima.`n`n**Detalles:**`n- Runner: ``${{ runner.name }}```n- Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`n`n> Issue auto-creado por GitHub Actions — revisar logs del run para diagnóstico."
+        gh issue create --title $titulo --body $cuerpo --label "area:devops"
