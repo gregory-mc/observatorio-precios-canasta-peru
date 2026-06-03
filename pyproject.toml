@@ -25,6 +25,11 @@ ingesta = [
     "lxml>=5.0",
     "tabula-py>=2.9",
 ]
+# Carga Bronze: R2 (archivos crudos) → Supabase Postgres
+# psycopg ya está en las dependencias base; aquí solo el cliente de R2.
+carga = [
+    "boto3>=1.34",
+]
 # Transformaciones SQL
 dbt = [
     "dbt-postgres>=1.8",

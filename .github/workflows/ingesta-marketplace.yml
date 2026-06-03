@@ -2,7 +2,7 @@ name: Ingesta Marketplace
 
 on:
   schedule:
-    - cron: "0 9 * * *" # 04:00 America/Lima (UTC-5)
+    - cron: "0 14 * * *" # 09:00 America/Lima (UTC-5)
   workflow_dispatch:
     inputs:
       simular_fallo:
