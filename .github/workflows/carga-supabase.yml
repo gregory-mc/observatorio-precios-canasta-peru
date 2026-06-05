@@ -1,0 +1,79 @@
+name: Carga Bronze - R2 a Supabase
+
+on:
+  schedule:
+    # ⏰ 16:00 America/Lima (UTC-5) = 21:00 UTC. Corre después de ambos scrapers
+    # (marketplace 09:00 y SISAP 14:00 hora Lima), así los CSV del día ya están en R2.
+    - cron: "0 21 * * *"
+  workflow_dispatch:
+    inputs:
+      fuente:
+        description: 'Fuente a cargar (marketplace / sisap / ambas)'
+        required: false
+        default: 'ambas'
+      fecha:
+        description: 'Fecha YYYY-MM-DD a cargar (vacío = hoy hora Lima)'
+        required: false
+        default: ''
+      simular_fallo:
+        description: 'Forzar fallo para probar la alerta (true/false)'
+        required: false
+        default: 'false'
+
+jobs:
+  cargar:
+    # Solo habla con R2 (Cloudflare) y Supabase, ambos públicos: no aplica el
+    # geo-bloqueo del MIDAGRI, así que corre en el runner estándar de GitHub.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Instalar dependencias de carga
+        run: pip install -e ".[carga]"
+
+      # Carga los CSV del día desde R2 → Supabase Postgres (schema bronze).
+      # Requiere estos secrets del repo (Settings > Secrets and variables > Actions):
+      #   R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ENDPOINT, R2_BUCKET
+      #   SUPABASE_DB_URL  -> connection string del pooler de Supabase (puerto 6543)
+      - name: Cargar R2 → Supabase (bronze)
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SIMULAR_FALLO: ${{ github.event.inputs.simular_fallo || 'false' }}
+          FUENTE: ${{ github.event.inputs.fuente || 'ambas' }}
+          FECHA: ${{ github.event.inputs.fecha || '' }}
+        run: |
+          set -euo pipefail
+          ARGS=(--fuente "$FUENTE")
+          if [ -n "$FECHA" ]; then ARGS+=(--fecha "$FECHA"); fi
+          python -m observatorio.carga.r2_a_supabase "${ARGS[@]}"
+
+      - name: 🚨 Crear issue de alerta por fallo
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --title "🚨 [Carga Bronze] Fallo de carga R2→Supabase $(date -u -d '-5 hours' +%Y-%m-%d)" \
+            --body "## Fallo detectado en la carga a Supabase
+
+          El workflow **${{ github.workflow }}** falló el $(date -u -d '-5 hours' +%F).
+
+          **Detalles:**
+          - Runner: \`${{ runner.name }}\`
+          - Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          > Issue auto-creado por GitHub Actions — revisar logs del run para diagnóstico." \
+            --label "area:devops"
