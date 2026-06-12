@@ -24,6 +24,7 @@ ingesta = [
     "beautifulsoup4>=4.12",
     "lxml>=5.0",
     "tabula-py>=2.9",
+    "holidays>=0.46",
 ]
 # Carga Bronze: R2 (archivos crudos) → Supabase Postgres
 # psycopg ya está en las dependencias base; aquí solo el cliente de R2.
