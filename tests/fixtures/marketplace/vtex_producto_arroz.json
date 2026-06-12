@@ -1,0 +1,514 @@
+[
+  {
+    "productId": "101190089",
+    "productName": "Arroz Extra Añejo Premium FARAÓN Bolsa 10Kg",
+    "brand": "FARAON",
+    "brandId": 72761,
+    "brandImageUrl": null,
+    "linkText": "arroz-extra-anejo-premium-faraon-bolsa-10-kg",
+    "productReference": "20147595",
+    "productReferenceCode": "20147595",
+    "categoryId": "439",
+    "productTitle": "Arroz Extra Añejo Premium FARAÓN Bolsa 10Kg | plazaVea",
+    "metaTagDescription": "¡Compra Online Arroz Extra Añejo Premium FARAÓN Bolsa 10Kg desde donde estés en plazaVea.com.pe!",
+    "releaseDate": "2025-03-06T00:00:00Z",
+    "clusterHighlights": {},
+    "productClusters": {
+      "31143": "Landing Makro | Comestibles",
+      "31289": "Landing Makro | Navidad",
+      "34962": "Marko | Precios redondos",
+      "35044": "Makro | Mundo Precio Redondos",
+      "37044": "Makro | Comestibles del 14.07 al 16.07",
+      "37239": "Mundo Horeca | De todo para tu hotel, restaurante o catering.",
+      "57806": "Cyber Wow Supermercado | abril 2026 | Ver todo",
+      "59594": "plazaVea | Comestibles| 13.06"
+    },
+    "searchableClusters": {},
+    "categories": [
+      "/Abarrotes/Arroz/Arroz Extra/",
+      "/Abarrotes/Arroz/",
+      "/Abarrotes/"
+    ],
+    "categoriesIds": [
+      "/431/432/439/",
+      "/431/432/",
+      "/431/"
+    ],
+    "link": "https://www.plazavea.com.pe/arroz-extra-anejo-premium-faraon-bolsa-10-kg/p",
+    "Tipo de Producto": [
+      "Supermercado"
+    ],
+    "Vendido por": [
+      "plazaVea"
+    ],
+    "Presentación unitarios vitrina": [
+      "Bolsa 10Kg"
+    ],
+    "Componentes del Producto": [
+      "Tipo de Producto",
+      "Vendido por",
+      "Presentación unitarios vitrina"
+    ],
+    "Descuentos exclusivos": [
+      "sin descuentos"
+    ],
+    "Descuentos": [
+      "Descuentos exclusivos"
+    ],
+    "Tipo de envío": [
+      "Despacho a domicilio",
+      "Recojo en tienda"
+    ],
+    "Método de Entrega": [
+      "Tipo de envío"
+    ],
+    "Contenido Empaque Ecommerce": [
+      "10"
+    ],
+    "Especificaciones": [
+      "Contenido Empaque Ecommerce"
+    ],
+    "allSpecifications": [
+      "Tipo de Producto",
+      "Vendido por",
+      "Presentación unitarios vitrina",
+      "Descuentos exclusivos",
+      "Tipo de envío",
+      "Contenido Empaque Ecommerce"
+    ],
+    "allSpecificationsGroups": [
+      "Componentes del Producto",
+      "Descuentos",
+      "Método de Entrega",
+      "Especificaciones"
+    ],
+    "description": "",
+    "items": [
+      {
+        "itemId": "11566644",
+        "name": "Arroz Extra Añejo Premium FARAÓN Bolsa 10Kg",
+        "nameComplete": "Arroz Extra Añejo Premium FARAÓN Bolsa 10Kg",
+        "complementName": "",
+        "ean": "7758950000146",
+        "referenceId": [
+          {
+            "Key": "RefId",
+            "Value": "20147595"
+          }
+        ],
+        "measurementUnit": "un",
+        "unitMultiplier": 1.0,
+        "modalType": null,
+        "isKit": false,
+        "images": [
+          {
+            "imageId": "34333994",
+            "imageLabel": null,
+            "imageTag": "<img src=\"~/arquivos/ids/34333994-#width#-#height#/20147595.jpg?v=639124920846730000\" width=\"#width#\" height=\"#height#\" alt=\"20147595\" id=\"\" />",
+            "imageUrl": "https://plazavea.vteximg.com.br/arquivos/ids/34333994/20147595.jpg?v=639124920846730000",
+            "imageText": "20147595",
+            "imageLastModified": "2026-04-22T22:01:24.6730000Z"
+          }
+        ],
+        "sellers": [
+          {
+            "sellerId": "1",
+            "sellerName": "Plaza Vea",
+            "addToCartLink": "https://www.plazavea.com.pe/checkout/cart/add?sku=11566644&qty=1&seller=1&sc=1&price=4640&cv=_&sc=1",
+            "sellerDefault": true,
+            "commertialOffer": {
+              "DeliverySlaSamplesPerRegion": {
+                "0": {
+                  "DeliverySlaPerTypes": [],
+                  "Region": null
+                }
+              },
+              "Installments": [
+                {
+                  "Value": 46.4,
+                  "InterestRate": 0.0,
+                  "TotalValuePlusInterestRate": 46.4,
+                  "NumberOfInstallments": 1,
+                  "PaymentSystemName": "Safetypay",
+                  "PaymentSystemGroupName": "safetypayPaymentGroup",
+                  "Name": "Safetypay à vista"
+                },
+                {
+                  "Value": 46.4,
+                  "InterestRate": 0.0,
+                  "TotalValuePlusInterestRate": 46.4,
+                  "NumberOfInstallments": 1,
+                  "PaymentSystemName": "Lotérica",
+                  "PaymentSystemGroupName": "lotteryPaymentGroup",
+                  "Name": "Lotérica à vista"
+                },
+                {
+                  "Value": 46.4,
+                  "InterestRate": 0.0,
+                  "TotalValuePlusInterestRate": 46.4,
+                  "NumberOfInstallments": 1,
+                  "PaymentSystemName": "AGORAWEB",
+                  "PaymentSystemGroupName": "custom202PaymentGroupPaymentGroup",
+                  "Name": "AGORAWEB à vista"
+                },
+                {
+                  "Value": 46.4,
+                  "InterestRate": 0.0,
+                  "TotalValuePlusInterestRate": 46.4,
+                  "NumberOfInstallments": 1,
+                  "PaymentSystemName": "Tarjetas-Credito-Debito-PROM",
+                  "PaymentSystemGroupName": "custom206PaymentGroupPaymentGroup",
+                  "Name": "Tarjetas-Credito-Debito-PROM à vista"
+                },
+                {
+                  "Value": 46.4,
+                  "InterestRate": 0.0,
+                  "TotalValuePlusInterestRate": 46.4,
+                  "NumberOfInstallments": 1,
+                  "PaymentSystemName": "Agora-Visa",
+                  "PaymentSystemGroupName": "custom208PaymentGroupPaymentGroup",
+                  "Name": "Agora-Visa à vista"
+                },
+                {
+                  "Value": 46.4,
+                  "InterestRate": 0.0,
+                  "TotalValuePlusInterestRate": 46.4,
+                  "NumberOfInstallments": 1,
+                  "PaymentSystemName": "Tarjetas-Interbank",
+                  "PaymentSystemGroupName": "custom209PaymentGroupPaymentGroup",
+                  "Name": "Tarjetas-Interbank à vista"
+                },
+                {
+                  "Value": 46.4,
+                  "InterestRate": 0.0,
+                  "TotalValuePlusInterestRate": 46.4,
+                  "NumberOfInstallments": 1,
+                  "PaymentSystemName": "Tarjeta-Oh-Cuotas",
+                  "PaymentSystemGroupName": "custom210PaymentGroupPaymentGroup",
+                  "Name": "Tarjeta-Oh-Cuotas à vista"
+                }
+              ],
+              "DiscountHighLight": [],
+              "GiftSkuIds": [],
+              "Teasers": [],
+              "PromotionTeasers": [],
+              "BuyTogether": [],
+              "ItemMetadataAttachment": [],
+              "Price": 46.4,
+              "ListPrice": 47.9,
+              "PriceWithoutDiscount": 47.9,
+              "FullSellingPrice": 46.4,
+              "PriceToken": "eyJhbGciOiJFUzI1NiIsImtpZCI6ImQ3ZjQyMTk1LWFiYzgtNDkwMy1iNWM5LTNkYjFkNDQ4MDM4MiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7InByaWNlIjo0NjQwLCJwcmljZVdpdGhvdXREaXNjb3VudCI6NDc5MCwic2VsbGVyIjoiMSIsImlkIjoiMTE1NjY2NDQiLCJhY2NvdW50TmFtZSI6InBsYXphdmVhIiwic2FsZXNDaGFubmVsIjoiMSJ9LCJleHAiOjE3ODEyMjk3NzAsImlhdCI6MTc4MTIyNzk3MCwianRpIjoiOGQ0OTEwOGEtNmM0Ni00NjJkLTk5MjEtOTE0OGZiMGExNDY4IiwiaXNzIjoic2Vzc2lvbi9kYXRhLXNpZ25lciJ9.MuCBPqiq_UnZp6B0pOIY6YD-C-Hro2QWpaTDp0g7B1bK0wOWA92r9KSQGpKdlZVQECbr8GpxlZRuMc-BrAlQ0A",
+              "RewardValue": 0.0,
+              "PriceValidUntil": "3000-01-02T00:00:00Z",
+              "AvailableQuantity": 57,
+              "IsAvailable": true,
+              "Tax": 0.0,
+              "DeliverySlaSamples": [
+                {
+                  "DeliverySlaPerTypes": [],
+                  "Region": null
+                }
+              ],
+              "GetInfoErrorMessage": null,
+              "CacheVersionUsedToCallCheckout": "_",
+              "PaymentOptions": {
+                "installmentOptions": [
+                  {
+                    "paymentSystem": "38",
+                    "bin": null,
+                    "paymentName": "Safetypay",
+                    "paymentGroupName": "safetypayPaymentGroup",
+                    "value": 4640,
+                    "installments": [
+                      {
+                        "count": 1,
+                        "hasInterestRate": false,
+                        "interestRate": 0,
+                        "value": 4640,
+                        "total": 4640,
+                        "sellerMerchantInstallments": [
+                          {
+                            "id": "PLAZAVEA",
+                            "count": 1,
+                            "hasInterestRate": false,
+                            "interestRate": 0,
+                            "value": 4640,
+                            "total": 4640
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "paymentSystem": "51",
+                    "bin": null,
+                    "paymentName": "Lotérica",
+                    "paymentGroupName": "lotteryPaymentGroup",
+                    "value": 4640,
+                    "installments": [
+                      {
+                        "count": 1,
+                        "hasInterestRate": false,
+                        "interestRate": 0,
+                        "value": 4640,
+                        "total": 4640,
+                        "sellerMerchantInstallments": [
+                          {
+                            "id": "PLAZAVEA",
+                            "count": 1,
+                            "hasInterestRate": false,
+                            "interestRate": 0,
+                            "value": 4640,
+                            "total": 4640
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "paymentSystem": "202",
+                    "bin": null,
+                    "paymentName": "AGORAWEB",
+                    "paymentGroupName": "custom202PaymentGroupPaymentGroup",
+                    "value": 4640,
+                    "installments": [
+                      {
+                        "count": 1,
+                        "hasInterestRate": false,
+                        "interestRate": 0,
+                        "value": 4640,
+                        "total": 4640,
+                        "sellerMerchantInstallments": [
+                          {
+                            "id": "PLAZAVEA",
+                            "count": 1,
+                            "hasInterestRate": false,
+                            "interestRate": 0,
+                            "value": 4640,
+                            "total": 4640
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "paymentSystem": "206",
+                    "bin": null,
+                    "paymentName": "Tarjetas-Credito-Debito-PROM",
+                    "paymentGroupName": "custom206PaymentGroupPaymentGroup",
+                    "value": 4640,
+                    "installments": [
+                      {
+                        "count": 1,
+                        "hasInterestRate": false,
+                        "interestRate": 0,
+                        "value": 4640,
+                        "total": 4640,
+                        "sellerMerchantInstallments": [
+                          {
+                            "id": "PLAZAVEA",
+                            "count": 1,
+                            "hasInterestRate": false,
+                            "interestRate": 0,
+                            "value": 4640,
+                            "total": 4640
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "paymentSystem": "208",
+                    "bin": null,
+                    "paymentName": "Agora-Visa",
+                    "paymentGroupName": "custom208PaymentGroupPaymentGroup",
+                    "value": 4640,
+                    "installments": [
+                      {
+                        "count": 1,
+                        "hasInterestRate": false,
+                        "interestRate": 0,
+                        "value": 4640,
+                        "total": 4640,
+                        "sellerMerchantInstallments": [
+                          {
+                            "id": "PLAZAVEA",
+                            "count": 1,
+                            "hasInterestRate": false,
+                            "interestRate": 0,
+                            "value": 4640,
+                            "total": 4640
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "paymentSystem": "209",
+                    "bin": null,
+                    "paymentName": "Tarjetas-Interbank",
+                    "paymentGroupName": "custom209PaymentGroupPaymentGroup",
+                    "value": 4640,
+                    "installments": [
+                      {
+                        "count": 1,
+                        "hasInterestRate": false,
+                        "interestRate": 0,
+                        "value": 4640,
+                        "total": 4640,
+                        "sellerMerchantInstallments": [
+                          {
+                            "id": "PLAZAVEA",
+                            "count": 1,
+                            "hasInterestRate": false,
+                            "interestRate": 0,
+                            "value": 4640,
+                            "total": 4640
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "paymentSystem": "210",
+                    "bin": null,
+                    "paymentName": "Tarjeta-Oh-Cuotas",
+                    "paymentGroupName": "custom210PaymentGroupPaymentGroup",
+                    "value": 4640,
+                    "installments": [
+                      {
+                        "count": 1,
+                        "hasInterestRate": false,
+                        "interestRate": 0,
+                        "value": 4640,
+                        "total": 4640,
+                        "sellerMerchantInstallments": [
+                          {
+                            "id": "PLAZAVEA",
+                            "count": 1,
+                            "hasInterestRate": false,
+                            "interestRate": 0,
+                            "value": 4640,
+                            "total": 4640
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ],
+                "paymentSystems": [
+                  {
+                    "id": 51,
+                    "name": "Lotérica",
+                    "groupName": "lotteryPaymentGroup",
+                    "validator": null,
+                    "stringId": "51",
+                    "template": "lotteryPaymentGroup-template",
+                    "requiresDocument": false,
+                    "isCustom": false,
+                    "description": null,
+                    "requiresAuthentication": false,
+                    "dueDate": "2026-06-19T00:00:00Z",
+                    "availablePayments": null
+                  },
+                  {
+                    "id": 38,
+                    "name": "Safetypay",
+                    "groupName": "safetypayPaymentGroup",
+                    "validator": null,
+                    "stringId": "38",
+                    "template": "safetypayPaymentGroup-template",
+                    "requiresDocument": false,
+                    "isCustom": false,
+                    "description": null,
+                    "requiresAuthentication": false,
+                    "dueDate": "2026-06-19T00:00:00Z",
+                    "availablePayments": null
+                  },
+                  {
+                    "id": 202,
+                    "name": "AGORAWEB",
+                    "groupName": "custom202PaymentGroupPaymentGroup",
+                    "validator": null,
+                    "stringId": "202",
+                    "template": "custom202PaymentGroupPaymentGroup-template",
+                    "requiresDocument": false,
+                    "isCustom": true,
+                    "description": "AGORAWEB",
+                    "requiresAuthentication": false,
+                    "dueDate": "2026-06-14T00:00:00Z",
+                    "availablePayments": null
+                  },
+                  {
+                    "id": 206,
+                    "name": "Tarjetas-Credito-Debito-PROM",
+                    "groupName": "custom206PaymentGroupPaymentGroup",
+                    "validator": null,
+                    "stringId": "206",
+                    "template": "custom206PaymentGroupPaymentGroup-template",
+                    "requiresDocument": false,
+                    "isCustom": true,
+                    "description": "Otras tarjetas de Crédito y Débito",
+                    "requiresAuthentication": false,
+                    "dueDate": "2026-06-14T00:00:00Z",
+                    "availablePayments": null
+                  },
+                  {
+                    "id": 208,
+                    "name": "Agora-Visa",
+                    "groupName": "custom208PaymentGroupPaymentGroup",
+                    "validator": null,
+                    "stringId": "208",
+                    "template": "custom208PaymentGroupPaymentGroup-template",
+                    "requiresDocument": false,
+                    "isCustom": true,
+                    "description": "Agora Visa",
+                    "requiresAuthentication": false,
+                    "dueDate": "2026-06-14T00:00:00Z",
+                    "availablePayments": null
+                  },
+                  {
+                    "id": 209,
+                    "name": "Tarjetas-Interbank",
+                    "groupName": "custom209PaymentGroupPaymentGroup",
+                    "validator": null,
+                    "stringId": "209",
+                    "template": "custom209PaymentGroupPaymentGroup-template",
+                    "requiresDocument": false,
+                    "isCustom": true,
+                    "description": "Tarjetas Interbank",
+                    "requiresAuthentication": false,
+                    "dueDate": "2026-06-14T00:00:00Z",
+                    "availablePayments": null
+                  },
+                  {
+                    "id": 210,
+                    "name": "Tarjeta-Oh-Cuotas",
+                    "groupName": "custom210PaymentGroupPaymentGroup",
+                    "validator": null,
+                    "stringId": "210",
+                    "template": "custom210PaymentGroupPaymentGroup-template",
+                    "requiresDocument": false,
+                    "isCustom": true,
+                    "description": "Tarjeta Oh! Visa y Mastercard",
+                    "requiresAuthentication": false,
+                    "dueDate": "2026-06-14T00:00:00Z",
+                    "availablePayments": null
+                  }
+                ],
+                "payments": [],
+                "giftCards": [],
+                "giftCardMessages": [],
+                "availableAccounts": [],
+                "availableTokens": []
+              }
+            }
+          }
+        ],
+        "Videos": [],
+        "estimatedDateArrival": null
+      }
+    ]
+  }
+]
