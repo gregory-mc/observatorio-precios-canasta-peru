@@ -21,13 +21,60 @@ Las columnas de cada tabla se derivan del mismo esquema que define el COPY
 (una sola fuente de verdad), espejando las dataclasses `ProductoPrecio` y
 `PrecioSisap` de la ingesta. Cada tabla añade `ingested_at timestamptz`.
 
-## Idempotencia
+## Esquema de las tablas
+
+El DDL versionado de referencia vive en
+[`observatorio/carga/sql/bronze_schema.sql`](../observatorio/carga/sql/bronze_schema.sql).
+Es idéntico al que el cargador genera y ejecuta en runtime (`CREATE SCHEMA/TABLE
+IF NOT EXISTS`), así que las tablas se autocrean en la primera corrida.
+
+### `bronze.marketplace_precios` — una fila por SKU/día
+
+| columna | tipo | nota |
+|---|---|---|
+| `fecha_captura` | `date` | YYYY-MM-DD hora Lima |
+| `fuente` | `text` | auditoría — origen (`marketplace`) |
+| `product_id`, `sku_id` | `text` | identificadores VTEX |
+| `nombre`, `marca` | `text` | |
+| `categoria`, `categoria_raiz` | `text` | ruta y raíz de categoría |
+| `ean` | `text` | código de barras |
+| `unidad_medida` | `text` | `measurementUnit` VTEX |
+| `multiplicador_unidad` | `double precision` | |
+| `precio`, `precio_lista` | `double precision` | venta / antes de descuento |
+| `disponible` | `boolean` | |
+| `cantidad_disponible` | `integer` | |
+| `vendedor`, `url`, `consulta` | `text` | `consulta` = trazabilidad del target |
+| `ingested_at` | `timestamptz NOT NULL DEFAULT now()` | auditoría — instante de carga |
+
+### `bronze.sisap_precios` — una fila por producto/día/región/tipo_mercado
+
+| columna | tipo | nota |
+|---|---|---|
+| `fecha_captura` | `date` | YYYY-MM-DD hora Lima |
+| `fuente` | `text` | auditoría — origen (`sisap_midagri`) |
+| `region` | `text` | p. ej. `Lima` |
+| `tipo_mercado` | `text` | `minorista` \| `mayorista` |
+| `producto` | `text` | nombre tal cual del HTML |
+| `unidad_medida` | `text` | puede venir vacío |
+| `equiv_kg_lt` | `double precision` | equivalencia kg/lt (anulable) |
+| `precio_prom` | `double precision` | promedio en soles (anulable = sin reporte) |
+| `ingested_at` | `timestamptz NOT NULL DEFAULT now()` | auditoría — instante de carga |
+
+Todas las columnas son anulables salvo `ingested_at`: bronze guarda lo crudo tal
+cual; la normalización y los no-nulos son trabajo de la capa silver (dbt).
+
+## Clave natural e idempotencia
+
+| tabla | clave natural | partición de carga (idempotencia) |
+|---|---|---|
+| `bronze.marketplace_precios` | `(fecha_captura, sku_id)` | por `fecha_captura` |
+| `bronze.sisap_precios` | `(fecha_captura, tipo_mercado, producto)` | por `(fecha_captura, tipo_mercado)` |
 
 La carga es idempotente **por fecha** (y por tipo de mercado en SISAP), igual
 que el scraper sobreescribe el CSV del día en R2: antes de insertar, borra las
-filas de esa partición. El `DELETE` + `COPY` van en una misma transacción, así
-que un fallo a mitad no deja la tabla en estado intermedio. Re-correr un día
-es seguro.
+filas de esa partición con un `DELETE` y luego hace `COPY`. Ambos van en una
+misma transacción, así que un fallo a mitad no deja la tabla en estado
+intermedio. Re-correr un día es seguro (no duplica).
 
 ## Variables de entorno
 
