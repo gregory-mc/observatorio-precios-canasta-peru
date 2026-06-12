@@ -71,3 +71,7 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# tests/conexion (handshake Supabase) y tests/ingesta/sisap (scripts de
+# experimentación/backfill) no son tests: hacen exit()/red al importar y
+# romperían la colección. Se excluyen de la corrida automatizada.
+addopts = "--ignore=tests/conexion --ignore=tests/ingesta/sisap"
