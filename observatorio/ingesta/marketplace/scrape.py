@@ -100,6 +100,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # Modo de prueba: fuerza fallo intencional para verificar que la alerta funciona
     import os
+
     if os.getenv("SIMULAR_FALLO", "false").lower() == "true":
         log.error("SIMULAR_FALLO=true — forzando fallo intencional para prueba de alertas.")
         return 1

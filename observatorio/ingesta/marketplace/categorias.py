@@ -24,8 +24,13 @@ TREE_URL = "https://www.plazavea.com.pe/api/catalog_system/pub/category/tree/3"
 Objetivo = tuple[str, str]
 
 
-def _descender(nodo: dict, ruta_ids: str, ruta_nombre: str, contar_fn: Callable[[str], int],
-               salida: list[Objetivo]) -> None:
+def _descender(
+    nodo: dict,
+    ruta_ids: str,
+    ruta_nombre: str,
+    contar_fn: Callable[[str], int],
+    salida: list[Objetivo],
+) -> None:
     fq = f"C:{ruta_ids}"
     hijos = nodo.get("children") or []
     if contar_fn(fq) <= MAX_OFFSET or not hijos:
