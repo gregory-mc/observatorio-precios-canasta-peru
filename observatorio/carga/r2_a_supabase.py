@@ -74,7 +74,13 @@ def _fecha(v: str | None) -> date | None:
 
 
 CONVERSORES = {"text": _texto, "float": _float, "int": _int, "bool": _bool, "date": _fecha}
-SQL_TIPOS = {"text": "text", "float": "double precision", "int": "integer", "bool": "boolean", "date": "date"}
+SQL_TIPOS = {
+    "text": "text",
+    "float": "double precision",
+    "int": "integer",
+    "bool": "boolean",
+    "date": "date",
+}
 
 
 # --------------------------------------------------------------------------- #
@@ -176,8 +182,15 @@ def descargar_csv(s3, bucket: str, clave: str) -> str | None:
     return obj["Body"].read().decode("utf-8")
 
 
-def cargar_csv(conn, *, tabla: str, columnas: list[tuple[str, str]], contenido: str,
-               where: str, where_params: tuple) -> int:
+def cargar_csv(
+    conn,
+    *,
+    tabla: str,
+    columnas: list[tuple[str, str]],
+    contenido: str,
+    where: str,
+    where_params: tuple,
+) -> int:
     """Borra las filas previas de la partición y hace COPY de las nuevas.
 
     DELETE + COPY van en la misma transacción (un commit al final): si algo

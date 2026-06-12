@@ -54,9 +54,7 @@ def test_aplanar_sku_sin_oferta_no_revienta():
     producto = {
         "productId": "1",
         "productName": "Sin stock",
-        "items": [
-            {"itemId": "9", "measurementUnit": "kg", "unitMultiplier": 1.0, "sellers": []}
-        ],
+        "items": [{"itemId": "9", "measurementUnit": "kg", "unitMultiplier": 1.0, "sellers": []}],
     }
     filas = aplanar(producto, fecha_captura="2026-05-26", consulta="texto:x")
     assert len(filas) == 1

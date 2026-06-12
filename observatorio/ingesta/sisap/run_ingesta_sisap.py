@@ -3,10 +3,11 @@
 import csv
 import os
 import sys
-import requests
 from dataclasses import asdict, fields
 from datetime import datetime, timedelta
 from pathlib import Path
+
+import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
@@ -59,10 +60,10 @@ def subir_a_r2(ruta_local: Path, clave_r2: str) -> None:
     Si las variables de entorno R2_* no están configuradas (desarrollo local),
     omite la subida con un aviso sin fallar.
     """
-    endpoint  = os.getenv("R2_ENDPOINT")
+    endpoint = os.getenv("R2_ENDPOINT")
     access_key = os.getenv("R2_ACCESS_KEY_ID")
     secret_key = os.getenv("R2_SECRET_ACCESS_KEY")
-    bucket    = os.getenv("R2_BUCKET")
+    bucket = os.getenv("R2_BUCKET")
 
     if not all([endpoint, access_key, secret_key, bucket]):
         print("⚠️  R2 no configurado — se omite la subida a la nube (desarrollo local).")
@@ -91,12 +92,12 @@ def ejecutar_ingesta_diaria() -> None:
 
     # Sincronización horaria con Perú (UTC-5)
     hora_peru = datetime.utcnow() - timedelta(hours=5)
-    str_fecha  = hora_peru.strftime("%d/%m/%Y")
+    str_fecha = hora_peru.strftime("%d/%m/%Y")
     str_archivo = hora_peru.strftime("%Y-%m-%d")
-    str_desde  = hora_peru.replace(day=1).strftime("%d/%m/%Y")
-    str_hasta  = str_fecha
+    str_desde = hora_peru.replace(day=1).strftime("%d/%m/%Y")
+    str_hasta = str_fecha
 
-    print(f"🚀 Iniciando Pipeline Bronze - SISAP (minorista + mayorista)")
+    print("🚀 Iniciando Pipeline Bronze - SISAP (minorista + mayorista)")
     print(f"📅 Fecha objetivo Perú: {str_fecha}")
     print(f"📊 Parámetros: Desde {str_desde} hasta {str_hasta}")
     print(f"📦 {len(PRODUCTOS_CANASTA_BASICA)} productos por request")
@@ -146,14 +147,18 @@ def ejecutar_ingesta_diaria() -> None:
 
         # Data quality: tabla con filas pero ningún precio disponible
         if not filas_con_precio:
-            print(f"⚠️  {tipo_mercado.capitalize()}: tabla con {len(filas)} filas pero 0 precios disponibles.")
+            print(
+                f"⚠️  {tipo_mercado.capitalize()}: tabla con {len(filas)} filas pero 0 precios disponibles."
+            )
 
         # Escribir CSV
         nombre_csv = f"{str_archivo}_sisap_lima_{tipo_mercado}.csv"
-        ruta_csv   = base / nombre_csv
+        ruta_csv = base / nombre_csv
         escribir_csv(filas, ruta_csv)
 
-        print(f"✅ {tipo_mercado.capitalize()}: {len(filas_con_precio)}/{len(filas)} productos con precio")
+        print(
+            f"✅ {tipo_mercado.capitalize()}: {len(filas_con_precio)}/{len(filas)} productos con precio"
+        )
         print(f"💾 CSV: {nombre_csv}")
 
         # Data Quality preview
