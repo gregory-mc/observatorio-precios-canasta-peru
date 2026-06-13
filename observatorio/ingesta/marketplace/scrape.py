@@ -28,7 +28,7 @@ from pathlib import Path
 import requests
 
 from .categorias import categorias_a_navegar
-from .client import HEADERS, buscar
+from .client import HEADERS, VtexError, buscar
 from .models import ProductoPrecio
 from .parser import aplanar
 from .relevancia import es_alimento
@@ -57,8 +57,14 @@ def recolectar(
     crudos: list[dict] = []
     filas: list[ProductoPrecio] = []
     vistos: set[str] = set()
+    omitidas: list[str] = []
     for fq, etiqueta in objetivos:
-        productos = buscar(session, fq=[fq], limite=limite)
+        try:
+            productos = buscar(session, fq=[fq], limite=limite)
+        except VtexError as exc:
+            log.warning("categoría omitida por error VTEX: %s — %s", etiqueta, exc)
+            omitidas.append(etiqueta)
+            continue
         nuevos = 0
         for p in productos:
             pid = str(p.get("productId", ""))
@@ -74,6 +80,8 @@ def recolectar(
             )
             nuevos += 1
         log.info("%s -> %d productos (%d nuevos)", etiqueta, len(productos), nuevos)
+    if omitidas:
+        log.warning("%d categoría(s) omitida(s) por errores VTEX: %s", len(omitidas), ", ".join(omitidas))
     return crudos, filas
 
 
