@@ -5,14 +5,14 @@ import os
 import sys
 import time
 from dataclasses import asdict, fields
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 
-import holidays
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
+from observatorio.comun.calendario import es_dia_habil_peru
 from observatorio.ingesta.sisap.config import PRODUCTOS_CANASTA_BASICA
 from observatorio.ingesta.sisap.models import PrecioSisap
 from observatorio.ingesta.sisap.parser import parsear_html
@@ -34,13 +34,6 @@ TIPOS_MERCADO = [
     ("minorista", "min_precio_prom"),
     ("mayorista", "may_precio_prom"),
 ]
-
-
-def es_dia_habil_peru(fecha: date) -> bool:
-    """Retorna False si MIDAGRI no publica ese día (fin de semana o feriado peruano)."""
-    if fecha.weekday() >= 5:  # 5=sábado, 6=domingo
-        return False
-    return fecha not in holidays.PE(years=fecha.year)
 
 
 def configurar_sesion_resiliente() -> requests.Session:
