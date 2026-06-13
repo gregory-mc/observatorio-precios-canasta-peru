@@ -27,6 +27,10 @@ data/
 *.db
 *.sqlite
 
+# Excepción: los fixtures de test SÍ se versionan (datos reales congelados para
+# los tests de parseo — p. ej. el .xlsx real del INEI).
+!tests/fixtures/**
+
 # dbt
 dbt/target/
 dbt/dbt_packages/
