@@ -39,6 +39,7 @@ Documentación de las fuentes que alimentan el observatorio.
 - **El nombre del archivo cambia cada mes** (`n01_..._lm_<mes><yy>.xlsx`) y el prefijo varió (`01_` → `n01_`). El script **descubre la URL** leyendo la página índice de precios; no se hardcodea.
 - El archivo masivo trae **solo el IPC general**, no el desglose por grupo (Alimentos). La hoja `Base Dic2021` ya reexpresa toda la serie desde 1994 en la base vigente → **no requiere empalme**. El desglose por grupo está solo en el servicio interactivo de gob.pe (pendiente, posible follow-up).
 - El portal del INEI presenta una **cadena de certificados TLS incompleta**; la descarga usa `verify=False` (solo archivos públicos).
+- **`www.inei.gob.pe` geo-bloquea IPs de datacenter** igual que el MIDAGRI: desde los runners de GitHub la descarga falla con `Network is unreachable` (Errno 101). Por eso el workflow corre en el **self-hosted runner** (IP peruana), el mismo que SISAP.
 
 ---
 
