@@ -7,6 +7,7 @@ debe mantenerse en sintonía con las tablas bronze (ver bronze_schema.sql).
 
 from dataclasses import fields
 
+from observatorio.ingesta.inei.models import IpcInei
 from observatorio.ingesta.marketplace.models import ProductoPrecio
 from observatorio.ingesta.sisap.models import PrecioSisap
 
@@ -42,6 +43,19 @@ PRECIOSISAP_CAMPOS = {
     "precio_prom",
 }
 
+IPCINEI_CAMPOS = {
+    "fuente",
+    "ambito",
+    "base",
+    "periodo",
+    "anio",
+    "mes",
+    "indice",
+    "var_mensual",
+    "var_acumulada",
+    "var_anual",
+}
+
 
 def test_esquema_productoprecio():
     assert {f.name for f in fields(ProductoPrecio)} == PRODUCTOPRECIO_CAMPOS
@@ -49,6 +63,10 @@ def test_esquema_productoprecio():
 
 def test_esquema_preciosisap():
     assert {f.name for f in fields(PrecioSisap)} == PRECIOSISAP_CAMPOS
+
+
+def test_esquema_ipcinei():
+    assert {f.name for f in fields(IpcInei)} == IPCINEI_CAMPOS
 
 
 def test_tipos_productoprecio_runtime():

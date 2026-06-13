@@ -61,3 +61,20 @@ CREATE TABLE IF NOT EXISTS bronze.sisap_precios (
     precio_prom    double precision,
     ingested_at    timestamptz NOT NULL DEFAULT now()
 );
+
+-- IPC del INEI (Lima Metropolitana, base Dic 2021 = 100). Serie mensual histórica
+-- continua desde 1994. Carga one-shot (issue #12): re-correr reemplaza toda la
+-- tabla (DELETE WHERE TRUE; luego COPY). Clave natural: (base, periodo).
+CREATE TABLE IF NOT EXISTS bronze.inei_ipc (
+    fuente         text,
+    ambito         text,
+    base           text,
+    periodo        text,
+    anio           integer,
+    mes            integer,
+    indice         double precision,
+    var_mensual    double precision,
+    var_acumulada  double precision,
+    var_anual      double precision,
+    ingested_at    timestamptz NOT NULL DEFAULT now()
+);

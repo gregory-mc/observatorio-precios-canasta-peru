@@ -25,6 +25,7 @@ ingesta = [
     "lxml>=5.0",
     "tabula-py>=2.9",
     "holidays>=0.46",
+    "openpyxl>=3.1",
 ]
 # Carga Bronze: R2 (archivos crudos) → Supabase Postgres
 # psycopg ya está en las dependencias base; aquí solo el cliente de R2.

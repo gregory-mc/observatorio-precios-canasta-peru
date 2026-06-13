@@ -120,6 +120,19 @@ COLUMNAS_SISAP = [
     ("precio_prom", "float"),
 ]
 
+COLUMNAS_INEI = [
+    ("fuente", "text"),
+    ("ambito", "text"),
+    ("base", "text"),
+    ("periodo", "text"),
+    ("anio", "int"),
+    ("mes", "int"),
+    ("indice", "float"),
+    ("var_mensual", "float"),
+    ("var_acumulada", "float"),
+    ("var_anual", "float"),
+]
+
 FUENTES = {
     "marketplace": {
         "tabla": "marketplace_precios",
@@ -140,7 +153,20 @@ FUENTES = {
             for tipo in ("minorista", "mayorista")
         ],
     },
+    # INEI IPC: descarga histórica one-shot (issue #12). No depende de la fecha:
+    # un único CSV con toda la serie. Idempotencia por reemplazo total (WHERE
+    # TRUE borra todo antes del COPY), no por partición de fecha.
+    "inei": {
+        "tabla": "inei_ipc",
+        "columnas": COLUMNAS_INEI,
+        "tareas": lambda fecha: [("inei/ipc_historico.csv", "TRUE", ())],
+    },
 }
+
+# Fuentes de la corrida diaria automática (`--fuente ambas`). El IPC del INEI es
+# un histórico one-shot, así que queda fuera del cron y sólo se carga a demanda
+# con `--fuente inei`.
+FUENTES_DIARIAS = ["marketplace", "sisap"]
 
 
 def ddl_tabla(tabla: str, columnas: list[tuple[str, str]]) -> str:
@@ -307,7 +333,7 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError:
         ap.error(f"--fecha inválida: {args.fecha!r} (formato esperado YYYY-MM-DD)")
 
-    fuentes = list(FUENTES) if args.fuente == "ambas" else [args.fuente]
+    fuentes = list(FUENTES_DIARIAS) if args.fuente == "ambas" else [args.fuente]
     log.info("📦 Cargando fuentes %s para la fecha %s", fuentes, args.fecha)
     return ejecutar(fuentes, args.fecha)
 

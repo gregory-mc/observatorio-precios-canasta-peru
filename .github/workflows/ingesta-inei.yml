@@ -1,0 +1,84 @@
+name: Ingesta Histórica - IPC INEI
+
+# Descarga one-shot del IPC histórico del INEI (issue #12). NO tiene cron: se
+# dispara a mano cada vez que el INEI publica un mes nuevo. Hace las dos etapas
+# en un solo run: descarga + subida a R2, y luego carga a bronze (Supabase).
+on:
+  workflow_dispatch:
+    inputs:
+      simular_fallo:
+        description: 'Forzar fallo en la carga para probar la alerta (true/false)'
+        required: false
+        default: 'false'
+
+jobs:
+  ingesta-inei:
+    # El INEI sirve los .xlsx desde un servidor de archivos público, que (a
+    # diferencia del app server del MIDAGRI) no aplica geo-bloqueo: corre en el
+    # runner estándar. Si en el futuro bloqueara IPs de datacenter, mover a
+    # `self-hosted` como SISAP.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      # ingesta → requests + openpyxl (descarga/parseo); carga → boto3 (R2).
+      # psycopg viene en las dependencias base (carga a Supabase).
+      - name: Instalar dependencias
+        run: pip install -e ".[ingesta,carga]"
+
+      # 1. Descarga el Excel del INEI, valida cobertura y sube el CSV a R2.
+      #    Requiere los secrets R2_* (Settings > Secrets and variables > Actions).
+      - name: Descargar IPC INEI → R2
+        env:
+          PYTHONUTF8: "1"
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        run: python -m observatorio.ingesta.inei.run_ingesta_inei
+
+      - name: Guardar CSV como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: inei-ipc-${{ github.run_id }}
+          path: observatorio/ingesta/inei/output_bronze_inei/
+          retention-days: 14
+
+      # 2. Carga el CSV desde R2 → Supabase Postgres (bronze.inei_ipc, reemplazo
+      #    total). Requiere además SUPABASE_DB_URL.
+      - name: Cargar R2 → Supabase (bronze.inei_ipc)
+        env:
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SIMULAR_FALLO: ${{ github.event.inputs.simular_fallo || 'false' }}
+        run: python -m observatorio.carga.r2_a_supabase --fuente inei
+
+      - name: 🚨 Crear issue de alerta por fallo
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --title "🚨 [INEI IPC] Fallo de ingesta histórica $(date -u -d '-5 hours' +%Y-%m-%d)" \
+            --body "## Fallo detectado en la ingesta histórica del IPC (INEI)
+
+          El workflow **${{ github.workflow }}** falló el $(date -u -d '-5 hours' +%F).
+
+          **Detalles:**
+          - Runner: \`${{ runner.name }}\`
+          - Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          > Issue auto-creado por GitHub Actions — revisar logs del run para diagnóstico." \
+            --label "area:devops"
