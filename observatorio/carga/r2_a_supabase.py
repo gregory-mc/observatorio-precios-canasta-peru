@@ -37,6 +37,8 @@ import os
 import sys
 from datetime import date, datetime, timedelta, timezone
 
+from observatorio.comun.calendario import es_dia_habil_peru
+
 log = logging.getLogger("carga")
 LIMA = timezone(timedelta(hours=-5))
 
@@ -87,7 +89,18 @@ SQL_TIPOS = {
 # Esquema de cada fuente: columnas (orden = orden del CSV) con su tipo, la tabla
 # destino y el constructor de "tareas" de carga (una por archivo en R2).
 # Cada tarea es (clave_r2, where_idempotencia, params_where).
+#
+# Opcionalmente una fuente declara ``esperada``: predicado (fecha str) -> bool que
+# indica si ESE día debería haber datos. Si no produjo archivos pero no se
+# esperaban (p.ej. SISAP un fin de semana), se omite sin marcar fallo. Si falta
+# la clave, la fuente se espera todos los días.
 # --------------------------------------------------------------------------- #
+def _sisap_esperada(fecha: str) -> bool:
+    """SISAP solo publica en días hábiles peruanos (MIDAGRI cierra finde/feriados)."""
+    return es_dia_habil_peru(date.fromisoformat(fecha))
+
+
+
 COLUMNAS_MARKETPLACE = [
     ("fecha_captura", "date"),
     ("fuente", "text"),
@@ -144,6 +157,7 @@ FUENTES = {
     "sisap": {
         "tabla": "sisap_precios",
         "columnas": COLUMNAS_SISAP,
+        "esperada": _sisap_esperada,
         "tareas": lambda fecha: [
             (
                 f"sisap/{fecha}_sisap_lima_{tipo}.csv",
@@ -294,10 +308,19 @@ def ejecutar(fuentes: list[str], fecha: str) -> int:
                 archivos_ok += 1
                 cargados_fuente += 1
 
-            # marketplace siempre produce un archivo; SISAP puede faltar un mercado
-            # un día puntual, pero que NINGÚN archivo de la fuente cargue es un fallo.
+            # Que NINGÚN archivo de la fuente cargue es fallo... salvo que ese día
+            # no se esperaran datos (p.ej. SISAP en fin de semana o feriado): MIDAGRI
+            # no publica, así que la ausencia es normal y se omite sin alertar.
             if cargados_fuente == 0:
-                fallos.append(f"{nombre_fuente} (sin archivos cargados para {fecha})")
+                esperada = spec.get("esperada", lambda _fecha: True)
+                if esperada(fecha):
+                    fallos.append(f"{nombre_fuente} (sin archivos cargados para {fecha})")
+                else:
+                    log.info(
+                        "⏭️  %s: %s no es día hábil — sin datos esperados, se omite sin error.",
+                        nombre_fuente,
+                        fecha,
+                    )
 
     log.info("🏁 Carga finalizada: %d archivos, %d filas en total.", archivos_ok, total_filas)
     if fallos:
