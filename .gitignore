@@ -24,6 +24,8 @@ data/
 *.parquet
 *.pdf
 *.xlsx
+*.sav
+*.dta
 *.db
 *.sqlite
 
