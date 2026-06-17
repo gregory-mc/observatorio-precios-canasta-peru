@@ -49,10 +49,17 @@ notebook los resuelve con un helper `col()` insensible a mayúsculas).
 
 ## Año utilizado
 
-**Regla:** usar la ENAHO **2025** si el INEI ya la publicó; si todavía no está
-disponible, caer a **2024**.
+**Regla:** usar la ENAHO más reciente posible (2025 si está, si no 2024).
 
-- **Año:** _(TODO: completar — 2025 o 2024)_
+⚠️ **Limitación de `enahodata` (v0.0.3):** su tabla interna de códigos solo llega
+hasta **2023**. Para 2024/2025 hay que aportar el "código INEI" del año e inyectarlo
+en `CODIGOS_INEI` (celda de descarga del notebook). Cómo obtenerlo desde una IP
+peruana: en `proyectos.inei.gob.pe/microdatos` elegir ENAHO Metodología ACTUALIZADA
+→ año → Módulo 07; la URL de descarga es `.../STATA/<CODIGO>-Modulo07.zip`.
+Referencia: 2021→759, 2022→784, 2023→906. Para la issue #13 (estructura), 2023 es
+equivalente; el año solo importa para los pesos de la canasta (#19).
+
+- **Año:** _(TODO: completar — 2023 por defecto; 2024/2025 si se consigue el código)_
 - **Fecha de descarga:** _(TODO)_
 - **Archivos `.dta` cargados:** _(TODO: p. ej. `enaho01-2024-601.dta`, `sumaria-2024.dta`)_
 
