@@ -46,7 +46,7 @@ dbt = [
 # `carga`, así que la instalación recomendada es:  pip install -e ".[notebooks,carga]"
 notebooks = [
     "jupyterlab>=4.0",
-    "enahodata>=0.1",
+    "enahodata>=0.0.3",
     "pyreadstat>=1.2",
     "matplotlib>=3.8",
 ]
