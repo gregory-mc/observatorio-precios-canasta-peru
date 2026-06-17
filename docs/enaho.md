@@ -59,9 +59,8 @@ peruana: en `proyectos.inei.gob.pe/microdatos` elegir ENAHO Metodología ACTUALI
 Referencia: 2021→759, 2022→784, 2023→906. Para la issue #13 (estructura), 2023 es
 equivalente; el año solo importa para los pesos de la canasta (#19).
 
-- **Año:** _(TODO: completar — 2023 por defecto; 2024/2025 si se consigue el código)_
-- **Fecha de descarga:** _(TODO)_
-- **Archivos `.dta` cargados:** _(TODO: p. ej. `enaho01-2024-601.dta`, `sumaria-2024.dta`)_
+- **Año:** **2023** (default; 2024/2025 cuando se consiga el código INEI).
+- **Archivos `.dta` cargados:** módulo 07 (`enaho01-2023-601.dta`) y módulo 34 (sumaria).
 
 El año está parametrizado en el notebook (`ANIO`); cambiarlo cuando el INEI publique
 uno más reciente.
@@ -77,23 +76,30 @@ uno más reciente.
 
 ---
 
-## Columnas clave (Módulo 601)
+## Columnas clave (Módulo 601, confirmadas en ENAHO 2023)
 
-> **TODO:** confirmar los nombres reales con el diccionario que imprime el notebook
-> (celda 1.1). Varían algo entre años. Candidatos esperados:
+Nombres en **minúscula** (Stata). El notebook los resuelve con el helper `col()`.
 
-| Rol | Columna (candidata) | Notas |
+| Rol | Columna | Notas |
 |---|---|---|
-| Identificador de hogar | `CONGLOME`, `VIVIENDA`, `HOGAR` | Llave compuesta del hogar |
-| Geografía | `UBIGEO` (6 díg.), `DOMINIO` | Departamento = 2 primeros dígitos del UBIGEO |
-| Código de producto | `P601A` | Mapea al catálogo de alimentos (etiquetas de valor) |
-| Gasto / cantidad | `I601*` / `D601*` / `G601*` | _(TODO: confirmar cuál es el gasto en soles)_ |
-| **Factor de expansión** | `FACTORA07` o `FACTOR07` | **Imprescindible** para cifras representativas |
+| Identificador de hogar | `conglome`, `vivienda`, `hogar` | Llave compuesta del hogar |
+| Geografía | `ubigeo` (6 díg.), `dominio`, `estrato` | Departamento = 2 primeros dígitos del `ubigeo` |
+| Periodo | `año`, `mes` | Año y mes de la encuesta |
+| **Código de producto** | `p601a` | El **nombre** está en la columna `p601x` (no en etiquetas de valor) |
+| Nombre de producto | `p601x` | Texto descriptivo del ítem |
+| Gasto (compra) | `p601c` → **`i601c`** (imputado, anualizado), `d601c` (deflactado) | `i601c` es el monto de compra anualizado en soles |
+| Gasto (autoconsumo/otros) | `i601e` | Monto estimado anualizado de lo obtenido sin compra |
+| Cantidades | `i601b2` (kg comprado), `i601d2` (kg obtenido) | Imputadas y anualizadas |
+| **Factor de expansión** | `factor07` | Factor anual (proyecciones CPV-2007). **Imprescindible** |
+
+### Gasto a usar para la canasta (decisión para #17/#19)
+- **Gasto monetario / precios de mercado:** `i601c` (monto comprado anualizado) + `i601b2` (kg). Es lo más alineado con nuestro tracking de precios minoristas (SISAP/Marketplace).
+- **Consumo total del hogar:** `i601c` + `i601e` (incluye autoconsumo valorizado). Útil si se quiere el peso real en la dieta, no solo lo comprado.
 
 ### Factor de expansión
 Cada hogar de la muestra representa a muchos de la población. **Siempre** ponderar por
-el factor de expansión al agregar (no promediar en crudo). La agregación por
-departamento usa los 2 primeros dígitos del `UBIGEO`.
+`factor07` al agregar (no promediar en crudo). La agregación por departamento usa los
+2 primeros dígitos del `ubigeo`.
 
 ---
 
