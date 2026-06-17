@@ -39,12 +39,14 @@ dbt = [
     "dbt-postgres>=1.8",
 ]
 # Notebooks de exploración (ENAHO microdatos, etc. — issue #13).
-# pyreadstat lee los .sav (SPSS) del INEI preservando las etiquetas de valor,
-# imprescindibles para descifrar los códigos de producto. Para descargar los
-# crudos desde R2 se reutiliza el cliente boto3 del grupo `carga`, así que la
-# instalación recomendada es:  pip install -e ".[notebooks,carga]"
+# enahodata descarga los microdatos del INEI (funciona desde IP peruana; el
+# geo-bloqueo solo afecta a los runners de GitHub). pyreadstat lee los .dta/.sav
+# preservando las etiquetas de valor, imprescindibles para descifrar los códigos
+# de producto. El respaldo opcional a R2 reutiliza el cliente boto3 del grupo
+# `carga`, así que la instalación recomendada es:  pip install -e ".[notebooks,carga]"
 notebooks = [
     "jupyterlab>=4.0",
+    "enahodata>=0.1",
     "pyreadstat>=1.2",
     "matplotlib>=3.8",
 ]

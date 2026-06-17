@@ -15,24 +15,35 @@ departamento. Destila los hallazgos del notebook
 
 ## Almacenamiento de los crudos
 
-La descarga del INEI es **manual y one-shot** (`www.inei.gob.pe` geo-bloquea IPs de
-datacenter — mismo problema que MIDAGRI — y los microdatos pesan cientos de MB).
+La descarga se hace con la librería **`enahodata`** (celda del notebook), que baja y
+descomprime los módulos directamente del INEI. **Funciona desde una IP peruana** — el
+geo-bloqueo del INEI (`inei.gob.pe`, mismo problema que MIDAGRI) solo afecta a los
+runners de GitHub, no a la máquina local.
 
 | Capa | Ubicación | Rol |
 |---|---|---|
-| Fuente de verdad | R2: `enaho/<ANIO>/*.sav` | Inmutable, reproducible por todo el equipo |
-| Copia de trabajo | local: `data/enaho/<ANIO>/*.sav` (gitignored) | Velocidad; el notebook la baja de R2 si falta |
+| Adquisición | `enahodata` → `data/enaho/` (gitignored) | Descarga reproducible desde IP peruana |
+| Respaldo (opcional) | R2: `enaho/<ANIO>/*.dta` | Para que #17/#19 corran en CI (geo-bloqueo) |
 
-Nunca se versionan los `.sav` (ver `.gitignore`: `data/`, `*.sav`, `*.dta`).
+Nunca se versionan los crudos (ver `.gitignore`: `data/`, `*.sav`, `*.dta`).
 
-**Flujo:** descargar `.sav` del INEI → `data/enaho/<ANIO>/` → subir a R2 una vez
-(celda 4 del notebook, `SUBIR=True`) → el resto del equipo los baja de R2.
+### Códigos de módulo en el INEI
+En el sistema de microdatos los módulos se identifican **por número**, no por el "601":
 
-### Cómo descargar del INEI
-1. `https://www.inei.gob.pe/microdatos` → *Consulta por Encuestas* →
-   **ENAHO Metodología ACTUALIZADA** → Condiciones de Vida y Pobreza.
-2. Elegir el **año más reciente disponible** (la ENAHO anual sale con ~1 año de rezago).
-3. Descargar en formato **SPSS (`.sav`)** al menos: **Módulo 601** y **Sumaria**.
+| Módulo | Nº | Archivo | Uso |
+|---|---|---|---|
+| Gastos en Alimentos y Bebidas | **07** | `...-601.dta` | Central: pesos de la canasta |
+| Sumaria (variables calculadas) | **34** | `sumaria-<anio>.dta` | Normalización / validación |
+
+`enahodata` baja en formato **`.dta` (Stata)**; `pyreadstat.read_dta` lo lee preservando
+las etiquetas de valor. Nombres de columna en `.dta` suelen ir en **minúscula** (el
+notebook los resuelve con un helper `col()` insensible a mayúsculas).
+
+### Flujo
+1. Notebook celda de descarga → `enahodata(modulos=["07","34"], anios=["<ANIO>"], ...)`.
+2. (Opcional) `SUBIR=True` para respaldar los `.dta` en R2.
+3. Alternativa manual: portal `https://proyectos.inei.gob.pe/microdatos/` →
+   *Consulta por Encuestas* → ENAHO Metodología ACTUALIZADA → Módulo **07** y **34**.
 
 ---
 
@@ -43,7 +54,7 @@ disponible, caer a **2024**.
 
 - **Año:** _(TODO: completar — 2025 o 2024)_
 - **Fecha de descarga:** _(TODO)_
-- **Archivos `.sav` cargados:** _(TODO: p. ej. `Enaho01-2024-601.sav`, `sumaria-2024.sav`)_
+- **Archivos `.dta` cargados:** _(TODO: p. ej. `enaho01-2024-601.dta`, `sumaria-2024.dta`)_
 
 El año está parametrizado en el notebook (`ANIO`); cambiarlo cuando el INEI publique
 uno más reciente.
