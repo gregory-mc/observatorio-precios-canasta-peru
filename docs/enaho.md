@@ -105,22 +105,38 @@ Cada hogar de la muestra representa a muchos de la población. **Siempre** ponde
 
 ## Códigos ENAHO de los productos del MVP
 
-> **TODO:** completar con los códigos exactos hallados en la celda 1.3 del notebook.
-> Decidir qué presentaciones se agrupan por producto (p. ej. papa blanca + amarilla).
+**Hallazgo clave:** el código `p601a` tiene 4 dígitos donde los **2 primeros = grupo
+del producto**. Cada producto del MVP cae en un único grupo. Buscar por nombre da
+falsos positivos (SALSA DE TOMATE, PAN DE HUEVO, HOJA DE LIMÓN, PESCADO POLLO,
+FRIJOL HUEVO DE PALOMA...), así que el mapeo correcto es **por grupo de 2 dígitos**,
+no por substring del nombre. Dentro del grupo, `XX00` es el agregado y `XX01+` son
+presentaciones.
 
-| Producto MVP | Código(s) ENAHO | Descripción en catálogo | Presentaciones agrupadas |
+| Producto MVP | Grupo | Código agregado | Presentaciones frescas relevantes |
 |---|---|---|---|
-| Papa | _(TODO)_ | | |
-| Limón | _(TODO)_ | | |
-| Pollo | _(TODO)_ | | |
-| Cebolla | _(TODO)_ | | |
-| Huevo | _(TODO)_ | | |
-| Tomate | _(TODO)_ | | |
+| **Papa** | `05` | `0500` (PAPA BLANCA Y OTRAS) | `0501` blanca, `0502` amarilla, `0503` huayro, `0504` color/rosada, `0506` nativas/variedades |
+| **Huevo** | `07` | `0700` (HUEVO) | `0701` gallina a granel (principal), `0704` envasado |
+| **Pollo** | `09` | `0900` (CARNE DE POLLO Y OTRAS AVES) | `0901` eviscerado, `0902` en pie/vivo, `0904` pechuga, `0905` pierna |
+| **Cebolla** | `32` | `3200` (CEBOLLA ROJA, BLANCA, ETC) | `3201` roja de cabeza (principal), `3202` china, `3203` de cola |
+| **Tomate** | `33` | `3300` (TOMATE ITALIANO, ROJO) | `3301` regional, `3302` italiano, `3303` redondo |
+| **Limón** | `38` | `3800` (LIMÓN) | `3801`/`3802` sutil/agrio (principal), `3804` sutil |
+
+### Códigos a EXCLUIR (no son el producto fresco)
+- **Pollo:** grupo `10` = menudencia/vísceras de pollo; grupo `11` (`1107`–`1109`) = pollo en conserva/enlatado; salchicha/jamonada de pollo. Son derivados, no carne fresca.
+- **Papa:** `0507` "PAPA SECA", `1804` "HARINA DE PAPA" → procesados.
+- **Huevo:** `1804`/`1805` "HARINA DE HUEVO", `1905` "FIDEOS AL HUEVO", `0108`/`0109` "PAN DE HUEVO" → procesados.
+- **Tomate:** grupo `30` (`3010`–`3024`) "SALSA/PASTA DE TOMATE" → procesado.
+- **Limón:** grupo `42` "HOJA DE LIMÓN PARA INFUSIÓN", `3904`–`4116` "LIMÓN DULCE" (otra fruta) → no es el limón ácido de cocina.
 
 ---
 
-## Decisiones y dudas pendientes (para #17)
+## Decisiones / dudas pendientes (para #17)
 
-- _(TODO)_ ¿Qué columna de gasto se usa como peso de la canasta?
-- _(TODO)_ ¿Se agregan presentaciones de un mismo producto? ¿Cómo?
-- _(TODO)_ Granularidad final de `canasta_consumo_dept` (¿por departamento × producto?).
+1. **Gasto a usar como peso:** `i601c` (compra anualizada) parece lo más alineado con
+   el tracking de precios minoristas. ¿Incluir `i601e` (autoconsumo) para el peso real
+   en la dieta? → definir en #17.
+2. **Presentaciones a agrupar:** ¿se suma todo el grupo (p. ej. todas las papas) o solo
+   las presentaciones frescas principales? Recomendado: agregar por grupo excluyendo los
+   códigos procesados listados arriba.
+3. **Granularidad de `canasta_consumo_dept`:** propuesto `(departamento, producto_mvp)`
+   con el peso = gasto ponderado por `factor07`, normalizado al total de la canasta.
