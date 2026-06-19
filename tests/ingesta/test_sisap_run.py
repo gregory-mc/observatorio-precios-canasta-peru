@@ -3,7 +3,13 @@
 from datetime import date
 from unittest.mock import MagicMock, patch
 
-from observatorio.ingesta.sisap.run_ingesta_sisap import _solicitar_filas, es_dia_habil_peru
+import pytest
+
+from observatorio.ingesta.sisap.run_ingesta_sisap import (
+    _solicitar_filas,
+    ejecutar_ingesta_diaria,
+    es_dia_habil_peru,
+)
 
 # ---------------------------------------------------------------------------
 # es_dia_habil_peru
@@ -119,3 +125,54 @@ class TestSolicitarFilas:
 
         assert filas is None
         session.get.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# ejecutar_ingesta_diaria — semántica de alerta (issue #80)
+# ---------------------------------------------------------------------------
+
+
+def _fila_con_precio() -> MagicMock:
+    fila = MagicMock()
+    fila.precio_prom = 5.0
+    fila.producto = "Papa"
+    return fila
+
+
+def _ejecutar_con_mercados(monkeypatch, *, minorista, mayorista):
+    """Corre ejecutar_ingesta_diaria mockeando red, día hábil y efectos de I/O.
+
+    `minorista`/`mayorista` son el valor que devuelve _solicitar_filas para cada
+    mercado (lista de filas, [] para tabla vacía, o None para error de red).
+    """
+    mod = "observatorio.ingesta.sisap.run_ingesta_sisap"
+    monkeypatch.setattr(f"{mod}.es_dia_habil_peru", lambda _fecha: True)
+    monkeypatch.setattr(f"{mod}.escribir_csv", lambda *a, **k: None)
+    monkeypatch.setattr(f"{mod}.subir_a_r2", lambda *a, **k: None)
+    monkeypatch.setattr(f"{mod}.configurar_sesion_resiliente", lambda: MagicMock())
+    # TIPOS_MERCADO se itera en orden: minorista, luego mayorista
+    monkeypatch.setattr(f"{mod}._solicitar_filas", MagicMock(side_effect=[minorista, mayorista]))
+    monkeypatch.delenv("SIMULAR_FALLO", raising=False)
+    ejecutar_ingesta_diaria()
+
+
+class TestSemanticaAlerta:
+    def test_un_mercado_vacio_y_otro_carga_no_alerta(self, monkeypatch):
+        # Caso del issue #80: minorista interdiario (vacío) pero mayorista carga.
+        _ejecutar_con_mercados(monkeypatch, minorista=[], mayorista=[_fila_con_precio()])
+        # No debe terminar con sys.exit(1)
+
+    def test_ambos_mercados_cargan_no_alerta(self, monkeypatch):
+        _ejecutar_con_mercados(
+            monkeypatch, minorista=[_fila_con_precio()], mayorista=[_fila_con_precio()]
+        )
+
+    def test_error_de_red_en_un_mercado_alerta(self, monkeypatch):
+        with pytest.raises(SystemExit) as exc:
+            _ejecutar_con_mercados(monkeypatch, minorista=None, mayorista=[_fila_con_precio()])
+        assert exc.value.code == 1
+
+    def test_todos_los_mercados_vacios_alerta(self, monkeypatch):
+        with pytest.raises(SystemExit) as exc:
+            _ejecutar_con_mercados(monkeypatch, minorista=[], mayorista=[])
+        assert exc.value.code == 1

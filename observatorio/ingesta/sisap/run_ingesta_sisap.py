@@ -157,7 +157,8 @@ def ejecutar_ingesta_diaria() -> None:
     payload_productos = [("productos[]", pid) for pid in PRODUCTOS_CANASTA_BASICA]
     cliente = configurar_sesion_resiliente()
     total_exitosos = 0
-    mercados_fallidos: list[str] = []  # registra cada mercado que no produjo datos
+    mercados_con_error: list[str] = []  # error de red/HTTP → fallo real
+    mercados_vacios: list[str] = []     # tabla vacía → ausencia legítima (cadencia de la fuente)
 
     for tipo_mercado, variable in TIPOS_MERCADO:
         print(f"\n📡 Solicitando precios {tipo_mercado.upper()}...")
@@ -182,16 +183,19 @@ def ejecutar_ingesta_diaria() -> None:
         filas_con_precio = [f for f in filas if f.precio_prom is not None] if filas else []
 
         if filas is None:
-            # Error de red irrecuperable
-            mercados_fallidos.append(tipo_mercado)
+            # Error de red irrecuperable → fallo real
+            mercados_con_error.append(tipo_mercado)
             continue
 
         if not filas:
+            # Tabla vacía: MIDAGRI publica el minorista de forma interdiaria, así que
+            # la ausencia de datos no es un fallo si el otro mercado sí cargó. Se trata
+            # como warning; la decisión de alertar se toma al final del pipeline.
             print(
                 f"⚠️  Tabla vacía en {tipo_mercado}"
                 f" — sin datos tras {_REINTENTOS_VACIO} reintentos."
             )
-            mercados_fallidos.append(tipo_mercado)
+            mercados_vacios.append(tipo_mercado)
             continue
 
         # Data quality: tabla con filas pero ningún precio disponible
@@ -224,9 +228,23 @@ def ejecutar_ingesta_diaria() -> None:
 
     total_mercados = len(TIPOS_MERCADO)
     print(f"\n🏁 Pipeline finalizado: {total_exitosos}/{total_mercados} requests exitosos.")
-    if mercados_fallidos:
-        print(f"🚨 Mercados con fallo: {', '.join(mercados_fallidos)}")
+
+    if mercados_vacios:
+        print(
+            f"ℹ️  Mercados sin datos hoy (cadencia de la fuente): {', '.join(mercados_vacios)}"
+        )
+
+    # Alertar solo ante un fallo real: error de red en algún mercado, o ningún
+    # mercado con datos (probable caída de la fuente). Un mercado vacío mientras
+    # el otro carga es normal — el minorista del SISAP se publica interdiario.
+    if mercados_con_error:
+        print(f"🚨 Mercados con error de red: {', '.join(mercados_con_error)}")
         print("   → Verificar disponibilidad del SISAP o conexión del runner.")
+        sys.exit(1)
+
+    if total_exitosos == 0:
+        print("🚨 Ningún mercado devolvió datos — probable caída de la fuente.")
+        print("   → Verificar disponibilidad del SISAP.")
         sys.exit(1)
 
 
