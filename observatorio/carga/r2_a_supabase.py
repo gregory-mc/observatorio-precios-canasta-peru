@@ -7,9 +7,10 @@ A partir de ahí dbt construye las capas silver/gold.
 Las dos fuentes de ingesta (ver ``observatorio/ingesta/``) escriben en R2 con estas
 claves; este módulo las mapea a sus tablas bronze:
 
-    marketplace/<fecha>.csv                  → bronze.marketplace_precios
-    sisap/<fecha>_sisap_lima_minorista.csv   → bronze.sisap_precios
-    sisap/<fecha>_sisap_lima_mayorista.csv   → bronze.sisap_precios
+    marketplace/<fecha>.csv                      → bronze.marketplace_precios
+    sisap/<fecha>_sisap_lima_minorista.csv       → bronze.sisap_precios
+    sisap/<fecha>_sisap_lima_mayorista.csv       → bronze.sisap_precios
+    osinergmin/<fecha>_osinergmin_combustibles.csv → bronze.osinergmin_precios
 
 La carga es **idempotente por fecha**: re-correr el mismo día borra las filas de
 esa fecha (y tipo de mercado, en SISAP) antes de reinsertarlas — igual que el
@@ -146,6 +147,23 @@ COLUMNAS_INEI = [
     ("var_anual", "float"),
 ]
 
+# OSINERGMIN/Facilito: una fila por establecimiento × producto. El orden debe
+# coincidir con dataclass PrecioCombustible (ingesta/osinergmin/models.py).
+COLUMNAS_OSINERGMIN = [
+    ("fecha_captura", "date"),
+    ("fuente", "text"),
+    ("departamento", "text"),
+    ("provincia", "text"),
+    ("distrito", "text"),
+    ("codigo_osi", "text"),
+    ("establecimiento", "text"),
+    ("direccion", "text"),
+    ("telefono", "text"),
+    ("producto", "text"),
+    ("producto_codigo", "text"),
+    ("precio_soles_galon", "float"),
+]
+
 FUENTES = {
     "marketplace": {
         "tabla": "marketplace_precios",
@@ -175,12 +193,22 @@ FUENTES = {
         "columnas": COLUMNAS_INEI,
         "tareas": lambda fecha: [("inei/ipc_historico.csv", "TRUE", ())],
     },
+    # OSINERGMIN: precios de combustible diarios (un CSV por día, todos los grifos
+    # del país). Facilito publica todos los días (incluso findes/feriados), así que
+    # se espera datos a diario — sin predicado ``esperada``.
+    "osinergmin": {
+        "tabla": "osinergmin_precios",
+        "columnas": COLUMNAS_OSINERGMIN,
+        "tareas": lambda fecha: [
+            (f"osinergmin/{fecha}_osinergmin_combustibles.csv", "fecha_captura = %s", (fecha,)),
+        ],
+    },
 }
 
 # Fuentes de la corrida diaria automática (`--fuente ambas`). El IPC del INEI es
 # un histórico one-shot, así que queda fuera del cron y sólo se carga a demanda
 # con `--fuente inei`.
-FUENTES_DIARIAS = ["marketplace", "sisap"]
+FUENTES_DIARIAS = ["marketplace", "sisap", "osinergmin"]
 
 
 def ddl_tabla(tabla: str, columnas: list[tuple[str, str]]) -> str:
