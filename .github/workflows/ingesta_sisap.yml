@@ -7,6 +7,10 @@ on:
     - cron: '00 19 * * 1-5'
   workflow_dispatch:
     inputs:
+      fecha_objetivo:
+        description: 'Fecha a ingestar en formato YYYY-MM-DD (vacío = hoy en hora Perú)'
+        required: false
+        default: ''
       simular_fallo:
         description: 'Forzar fallo para probar la alerta (true/false)'
         required: false
@@ -37,6 +41,7 @@ jobs:
       shell: powershell
       env:
         PYTHONUTF8: "1"
+        FECHA_OVERRIDE: ${{ github.event.inputs.fecha_objetivo || '' }}
         SIMULAR_FALLO: ${{ github.event.inputs.simular_fallo || 'false' }}
         R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
         R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}

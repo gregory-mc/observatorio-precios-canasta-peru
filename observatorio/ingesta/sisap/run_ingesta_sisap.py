@@ -132,8 +132,21 @@ def ejecutar_ingesta_diaria() -> None:
         print("🧪 SIMULAR_FALLO=true — forzando fallo intencional para prueba de alertas.")
         sys.exit(1)
 
-    # Sincronización horaria con Perú (UTC-5)
-    hora_peru = datetime.utcnow() - timedelta(hours=5)
+    # Fecha objetivo: override manual (backfill) o sincronización horaria con Perú (UTC-5).
+    # FECHA_OVERRIDE permite re-ejecutar una fecha pasada cuando el cron no corrió a tiempo.
+    fecha_override = os.getenv("FECHA_OVERRIDE", "").strip()
+    if fecha_override:
+        try:
+            hora_peru = datetime.strptime(fecha_override, "%Y-%m-%d")
+        except ValueError:
+            print(
+                f"❌ FECHA_OVERRIDE inválida: '{fecha_override}'"
+                " — formato esperado YYYY-MM-DD."
+            )
+            sys.exit(1)
+        print(f"🗓️  FECHA_OVERRIDE activa — backfill manual para {fecha_override}.")
+    else:
+        hora_peru = datetime.utcnow() - timedelta(hours=5)
     str_fecha = hora_peru.strftime("%d/%m/%Y")
     str_archivo = hora_peru.strftime("%Y-%m-%d")
     str_desde = hora_peru.replace(day=1).strftime("%d/%m/%Y")
