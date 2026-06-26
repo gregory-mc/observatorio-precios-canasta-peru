@@ -130,13 +130,16 @@ presentaciones.
 
 ---
 
-## Decisiones / dudas pendientes (para #17)
+## Decisiones de diseño (#17 — resueltas)
 
-1. **Gasto a usar como peso:** `i601c` (compra anualizada) parece lo más alineado con
-   el tracking de precios minoristas. ¿Incluir `i601e` (autoconsumo) para el peso real
-   en la dieta? → definir en #17.
-2. **Presentaciones a agrupar:** ¿se suma todo el grupo (p. ej. todas las papas) o solo
-   las presentaciones frescas principales? Recomendado: agregar por grupo excluyendo los
-   códigos procesados listados arriba.
-3. **Granularidad de `canasta_consumo_dept`:** propuesto `(departamento, producto_mvp)`
-   con el peso = gasto ponderado por `factor07`, normalizado al total de la canasta.
+Resueltas en [`docs/canasta_consumo_dept.md`](canasta_consumo_dept.md) (diseño de la tabla).
+Resumen:
+
+1. **Gasto a usar como peso:** ✅ `i601c` (compra monetaria anualizada), por alineación
+   con el tracking de precios de mercado. `i601e` (autoconsumo) **no** entra en el peso por
+   defecto pero se persiste en `gasto_total_anual` para poder recalcular sin reprocesar.
+2. **Presentaciones a agrupar:** ✅ se **suma todo el grupo de 2 dígitos excluyendo los
+   códigos procesados** listados arriba.
+3. **Granularidad de `canasta_consumo_dept`:** ✅ `(anio_enaho, cod_departamento, producto)`,
+   peso ponderado por `factor07` y **normalizado dentro del MVP** (Σ pesos = 1.0 por depto).
+   `anio_enaho` entra en la clave para no colisionar entre años de encuesta.
