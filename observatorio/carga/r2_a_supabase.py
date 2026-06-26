@@ -39,6 +39,7 @@ import sys
 from datetime import date, datetime, timedelta, timezone
 
 from observatorio.comun.calendario import es_dia_habil_peru
+from observatorio.validacion import SUITES, Suite, validar_o_error
 
 log = logging.getLogger("carga")
 LIMA = timezone(timedelta(hours=-5))
@@ -258,11 +259,17 @@ def cargar_csv(
     contenido: str,
     where: str,
     where_params: tuple,
+    suite: Suite | None = None,
 ) -> int:
     """Borra las filas previas de la partición y hace COPY de las nuevas.
 
     DELETE + COPY van en la misma transacción (un commit al final): si algo
     falla, la tabla queda como estaba. Devuelve el número de filas insertadas.
+
+    Si se pasa una ``suite`` de validación (issue #18), las filas se chequean
+    **antes** del COPY: si el reporte trae errores se lanza ``ValidacionError`` y
+    no se inserta nada (la transacción ni siquiera empieza). Las advertencias se
+    registran pero no bloquean.
     """
     nombres = [c for c, _ in columnas]
     convs = [CONVERSORES[t] for _, t in columnas]
@@ -272,13 +279,26 @@ def cargar_csv(
     if faltantes:
         raise ValueError(f"El CSV no trae las columnas esperadas para {tabla}: {sorted(faltantes)}")
 
+    # Materializamos las filas para poder validarlas antes de tocar la base. Los
+    # volúmenes bronze (precios de un día) son chicos, así que cabe en memoria.
+    filas_csv = list(reader)
+
+    if suite is not None:
+        import pandas as pd
+
+        df = pd.DataFrame(filas_csv, columns=reader.fieldnames)
+        reporte = validar_o_error(df, suite)  # lanza ValidacionError si hay errores
+        for adv in reporte.advertencias:
+            log.warning("   ⚠️  Validación %s: %s", suite.nombre, adv)
+
     cols_sql = ", ".join(nombres)
     filas = 0
     with conn.cursor() as cur:
         cur.execute(f"DELETE FROM bronze.{tabla} WHERE {where}", where_params)
         with cur.copy(f"COPY bronze.{tabla} ({cols_sql}) FROM STDIN") as copy:
-            for fila in reader:
-                copy.write_row([conv(fila.get(nombre)) for nombre, conv in zip(nombres, convs)])
+            for fila in filas_csv:
+                valores = [conv(fila.get(n)) for n, conv in zip(nombres, convs, strict=True)]
+                copy.write_row(valores)
                 filas += 1
     conn.commit()
     return filas
@@ -324,6 +344,8 @@ def ejecutar(fuentes: list[str], fecha: str) -> int:
                         contenido=contenido,
                         where=where,
                         where_params=where_params,
+                        # Suite de validación de la fuente (#18); None si no hay.
+                        suite=SUITES.get(nombre_fuente),
                     )
                 except Exception as e:  # noqa: BLE001 — registramos y seguimos con el resto
                     conn.rollback()
