@@ -188,13 +188,31 @@ condiciona el diseño de la clave (se eligió ubigeo como llave canónica por se
 
 ---
 
-## 8. Pendiente para #19 (construcción)
+## 8. Construcción (#19) — estado
 
-- Conseguir el **código INEI** de la ENAHO más reciente (2024/2025) para usarla en vez de
-  2023 (afecta los pesos; ver `docs/enaho.md` §"Año utilizado").
-- **Verificar doble conteo `XX00` vs `XX0n`**: confirmar que un hogar no reporta el mismo
-  producto bajo el código agregado y uno específico en el mismo periodo; si ocurre, preferir
-  el código específico.
-- Construir `dim_departamento` (ubigeo ↔ nombre ↔ región SISAP) para el join con precios.
-- Escribir el one-shot de carga idempotente + los tests de §7.
+Implementado en `observatorio/canasta/` (PR de #19):
+
+- ✅ **One-shot** `construir_canasta.py`: lógica pura `construir_pesos(df_601, anio)` +
+  lectura `.dta` (`pyreadstat`) + carga idempotente por año a `gold.canasta_consumo_dept`
+  (`DELETE WHERE anio_enaho` + `COPY`). CLI con `--anio/--dta/--dry-run/--salida`.
+- ✅ **Mapeo de productos** `productos.py`: por grupo de 2 dígitos de `p601a`, excluyendo
+  procesados (única exclusión intra-grupo: papa seca `0507`; el resto cae en otros grupos).
+- ✅ **`dim_departamento`** (`dim_departamento.py` + `sql/gold_schema.sql`): 25 deptos,
+  ubigeo ↔ nombre. `region_sisap` es **best-effort** (= nombre del depto); falta reconciliar
+  contra `SELECT DISTINCT region FROM bronze.sisap_precios` antes del join definitivo.
+- ✅ **Tests §7** (`tests/canasta/`) con módulo 601 sintético (sin `.dta` ni base) + la
+  **suite de calidad** `SUITE_CANASTA` (motor de #18): Σ pesos = 1.0, dominios, clave única,
+  rangos; n_muestra<30 y precio implícito fuera de rango como **advertencias**.
+
+### Decisión tomada: doble conteo `XX00` vs `XX0n`
+Se sigue el supuesto del §4.1 (cada fila del módulo es una línea de compra distinta, así
+que sumar todos los códigos no-excluidos del grupo **no** duplica) → se suman tanto el
+agregado `XX00` como las presentaciones `XX0n`. La verificación empírica de co-ocurrencia
+(un hogar reportando el mismo producto bajo `XX00` y `XX0n` en el mismo periodo) queda
+pendiente de correr contra los microdatos reales; si apareciera, preferir el código específico.
+
+### Genuinamente pendiente (no es código)
+- Conseguir el **código INEI** de la ENAHO más reciente (2024/2025) para recargar con
+  `--anio` y reemplazar 2023 (afecta los pesos; ver `docs/enaho.md` §"Año utilizado").
+- Reconciliar `dim_departamento.region_sisap` con los valores reales de SISAP.
 ```
