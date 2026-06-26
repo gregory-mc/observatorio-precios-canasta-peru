@@ -9,6 +9,7 @@ from dataclasses import fields
 
 from observatorio.ingesta.inei.models import IpcInei
 from observatorio.ingesta.marketplace.models import ProductoPrecio
+from observatorio.ingesta.osinergmin.models import PrecioCombustible
 from observatorio.ingesta.sisap.models import PrecioSisap
 
 PRODUCTOPRECIO_CAMPOS = {
@@ -56,6 +57,21 @@ IPCINEI_CAMPOS = {
     "var_anual",
 }
 
+PRECIOCOMBUSTIBLE_CAMPOS = {
+    "fecha_captura",
+    "fuente",
+    "departamento",
+    "provincia",
+    "distrito",
+    "codigo_osi",
+    "establecimiento",
+    "direccion",
+    "telefono",
+    "producto",
+    "producto_codigo",
+    "precio_soles_galon",
+}
+
 
 def test_esquema_productoprecio():
     assert {f.name for f in fields(ProductoPrecio)} == PRODUCTOPRECIO_CAMPOS
@@ -67,6 +83,10 @@ def test_esquema_preciosisap():
 
 def test_esquema_ipcinei():
     assert {f.name for f in fields(IpcInei)} == IPCINEI_CAMPOS
+
+
+def test_esquema_preciocombustible():
+    assert {f.name for f in fields(PrecioCombustible)} == PRECIOCOMBUSTIBLE_CAMPOS
 
 
 def test_tipos_productoprecio_runtime():

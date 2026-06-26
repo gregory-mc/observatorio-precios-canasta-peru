@@ -1,7 +1,7 @@
 # Fuentes de datos
 
 Documentación de las fuentes que alimentan el observatorio.
-Última actualización: 2026-06-13
+Última actualización: 2026-06-23
 
 ---
 
@@ -11,6 +11,7 @@ Documentación de las fuentes que alimentan el observatorio.
 |---|---|---|---|---|---|
 | **SISAP — MIDAGRI** | Precios de referencia de la canasta básica en mercados minoristas de Lima Metropolitana | Diaria | HTML (scraping AJAX) | `http://sistemas.midagri.gob.pe/sisap/portal2/ciudades/resumenes/filtrar` | `observatorio/ingesta/sisap/` |
 | **Marketplace — Plaza Vea (VTEX)** | Precios retail por SKU (nombre, marca, categoría, unidad, precio) | Diaria | JSON → CSV | `https://www.plazavea.com.pe/api/catalog_system/pub/products/search` | `observatorio/ingesta/marketplace/` |
+| **OSINERGMIN — Facilito** | Precios de combustible automotor por establecimiento (gasohol regular/premium, diésel DB5) en todo el país | Diaria | HTML vía navegador headless (reCAPTCHA v3) | `https://www.facilito.gob.pe/facilito/pages/facilito/buscadorEESS.jsp` | `observatorio/ingesta/osinergmin/` |
 
 ### Notas de acceso y limitaciones
 
@@ -25,6 +26,15 @@ Documentación de las fuentes que alimentan el observatorio.
 - Tope de **2,500 SKUs por búsqueda** en el endpoint legacy. Categorías con más SKUs deben consultarse por subcategorías.
 - El endpoint moderno *Intelligent Search* regionaliza resultados y devuelve 0 para frescos (cebolla, huevos). Se usa el **endpoint legacy** `catalog_system`.
 - Cron configurado a las **04:00 AM hora Perú (09:00 UTC)**.
+
+**OSINERGMIN — Facilito (issue #15)**
+- Toda consulta de precios está protegida con **reCAPTCHA v3**: la página mina un token por JS en cada carga y un POST sin token válido redirige a `errorRecaptcha.jsp`. Por eso la ingesta usa **navegador headless (Playwright + Chromium)**, no `requests` — es la única fuente que lo requiere. El parseo del HTML sí es puro (`parser.py`, testeable sin red).
+- El formulario es un **cascade**: departamento → provincia → producto. El nivel de departamento solo no devuelve filas; hay que bajar al menos a **provincia** (el distrito se deja sin elegir para traer todos los grifos de la provincia). Las provincias se descubren en vivo del `<select>`; no se hardcodean.
+- DataTables **pagina del lado cliente**: el DOM vivo muestra 10 filas aunque la respuesta del servidor traiga todas. El scraper lee la **respuesta cruda del POST**, no el DOM ya paginado.
+- Productos cubiertos (buscador EESS de combustible líquido): **Gasohol Regular (126), Gasohol Premium (127), DB5 S-50 UV / diésel (40)**. GNV y GLP automotor están en buscadores aparte (posible follow-up).
+- Granularidad bronze = **un grifo × producto × día** (con `codigo_osi`, distrito, dirección). La agregación a precio por departamento/distrito es trabajo de dbt (silver).
+- Recorre los 25 departamentos × sus provincias × 3 productos ⇒ varios cientos de consultas (~25 min). Cada fallo puntual (timeout, reCAPTCHA) se registra y no aborta el run; solo se alerta si el run termina con **0 filas**.
+- Corre en el **self-hosted runner** (IP peruana, score de reCAPTCHA más confiable), igual que SISAP. Cron a las **11:00 AM hora Perú (16:00 UTC)**, **todos los días** (Facilito publica también findes/feriados).
 
 ---
 
@@ -50,7 +60,6 @@ Documentación de las fuentes que alimentan el observatorio.
 | Fuente | Qué publica | Frecuencia | Formato esperado | URL | Issue |
 |---|---|---|---|---|---|
 | **SENAMHI** | Clima diario por estación (lluvia, temp. mín/máx) | Diaria | API / boletín | `https://www.senamhi.gob.pe` | #14 |
-| **OSINERGMIN** | Precios de combustible por departamento | Diaria | Web (tabla HTML) | `https://www.osinergmin.gob.pe` | #15 |
 
 ### Fuentes históricas / complementarias
 

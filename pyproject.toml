@@ -26,6 +26,10 @@ ingesta = [
     "tabula-py>=2.9",
     "holidays>=0.46",
     "openpyxl>=3.1",
+    # OSINERGMIN/Facilito gatea las consultas con reCAPTCHA v3: hace falta un
+    # navegador real (no requests) para minar el token. Tras instalar el paquete
+    # hay que bajar el binario:  python -m playwright install chromium
+    "playwright>=1.45",
 ]
 # Carga Bronze: R2 (archivos crudos) → Supabase Postgres
 # psycopg ya está en las dependencias base; aquí el cliente de R2 y `holidays`

@@ -1,0 +1,98 @@
+# .github/workflows/ingesta-osinergmin.yml
+name: Cron Diario - Ingesta Bronze OSINERGMIN
+
+on:
+  schedule:
+    # ⏰ Diario a las 16:00 UTC (11:00 AM hora de Perú). Facilito publica todos los
+    # días (incluso findes/feriados), por eso corre 7 días/semana — a diferencia
+    # de SISAP, que solo en días hábiles.
+    - cron: '00 16 * * *'
+  workflow_dispatch:
+    inputs:
+      simular_fallo:
+        description: 'Forzar fallo para probar la alerta (true/false)'
+        required: false
+        default: 'false'
+      departamento:
+        description: 'Código Facilito de un solo departamento (debug, opcional)'
+        required: false
+        default: ''
+
+jobs:
+  ejecutar_ingesta:
+    # Self-hosted (PC con IP peruana): el score de reCAPTCHA v3 es más confiable
+    # desde una IP residencial, y es un job largo (~25 min) mejor en el runner
+    # dedicado. Es el mismo runner que SISAP.
+    runs-on: self-hosted
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+    - name: 📥 Clonar el Repositorio
+      uses: actions/checkout@v4
+
+    - name: 🐍 Configurar Python 3.10
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: 🛠️ Instalar Dependencias + Chromium (Playwright)
+      shell: powershell
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests beautifulsoup4 boto3 playwright
+        python -m playwright install chromium
+
+    - name: ⛽ Ejecutar Script de Ingesta Diaria
+      shell: powershell
+      env:
+        PYTHONUTF8: "1"
+        SIMULAR_FALLO: ${{ github.event.inputs.simular_fallo || 'false' }}
+        R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+        R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+        R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        R2_BUCKET: ${{ secrets.R2_BUCKET }}
+      run: |
+        $env:PYTHONPATH = "${{ github.workspace }}"
+        $depArg = "${{ github.event.inputs.departamento }}"
+        if ([string]::IsNullOrWhiteSpace($depArg)) {
+          python -m observatorio.ingesta.osinergmin.run_ingesta_osinergmin
+        } else {
+          python -m observatorio.ingesta.osinergmin.run_ingesta_osinergmin --departamento $depArg
+        }
+
+    - name: 📦 Almacenar Snapshot como Artefacto de GitHub
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: snapshot-osinergmin
+        path: data/bronze/osinergmin/
+        retention-days: 3
+        if-no-files-found: ignore
+
+    - name: 🚨 Crear issue de alerta por fallo
+      if: failure()
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      shell: powershell
+      run: |
+        $fechaLima = (Get-Date).ToUniversalTime().AddHours(-5).ToString("yyyy-MM-dd")
+        $titulo = "ALERTA [OSINERGMIN] Fallo de ingesta $fechaLima"
+        $runUrl = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        $lineas = @(
+          "## Fallo detectado en ingesta OSINERGMIN (Facilito)",
+          "",
+          "El workflow **${{ github.workflow }}** fallo el $fechaLima.",
+          "",
+          "**Detalles:**",
+          "- Runner: ${{ runner.name }}",
+          "- Run: $runUrl",
+          "",
+          "Posibles causas: reCAPTCHA rechazado (score bajo), cambio del HTML/flujo de Facilito, o caida de la fuente.",
+          "",
+          "> Issue auto-creado por GitHub Actions - revisar logs del run para diagnostico."
+        )
+        $bodyFile = Join-Path $env:RUNNER_TEMP "alerta_osinergmin.txt"
+        $lineas | Out-File -FilePath $bodyFile -Encoding utf8
+        gh issue create --title $titulo --body-file $bodyFile --label "area:ingesta"
