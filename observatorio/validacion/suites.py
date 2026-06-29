@@ -96,8 +96,14 @@ SUITE_OSINERGMIN = Suite(
         NoNulo("fecha_captura"),
         NoNulo("establecimiento"),
         NoNulo("producto"),
-        # Un precio por establecimiento × producto × día.
-        ClaveUnica(["fecha_captura", "codigo_osi", "producto_codigo"]),
+        # Un precio por establecimiento × producto × día. Facilito a veces lista
+        # grifos sin codigo_osi (irMapa('null') → None → "" en el CSV), así que
+        # NO basta con (fecha, codigo_osi, producto): varios grifos sin código
+        # colapsarían a la misma clave. El establecimiento se identifica por su
+        # codigo_osi cuando existe y, si no, por nombre + dirección.
+        ClaveUnica(
+            ["fecha_captura", "codigo_osi", "establecimiento", "direccion", "producto_codigo"]
+        ),
         EnRango("precio_soles_galon", minimo=0),
         EnRango("precio_soles_galon", maximo=PRECIO_ABSURDO, severidad="advertencia"),
     ],

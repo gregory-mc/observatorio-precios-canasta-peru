@@ -165,6 +165,22 @@ def _sisap_ok() -> pd.DataFrame:
     )
 
 
+def _osinergmin_ok() -> pd.DataFrame:
+    # Dos grifos SIN codigo_osi (== "" en el CSV, como los entrega Facilito) que
+    # venden el mismo producto: se distinguen por establecimiento + dirección.
+    return pd.DataFrame(
+        {
+            "fecha_captura": ["2026-06-28", "2026-06-28"],
+            "codigo_osi": ["", ""],
+            "establecimiento": ["GRIFO A", "GRIFO B"],
+            "direccion": ["AV. UNO 100", "AV. DOS 200"],
+            "producto": ["Gasohol Regular", "Gasohol Regular"],
+            "producto_codigo": ["126", "126"],
+            "precio_soles_galon": ["15.80", "16.20"],
+        }
+    )
+
+
 class TestSuitesPorFuente:
     def test_registro_cubre_fuentes_de_carga(self):
         # Las suites deben existir para las fuentes que el cargador conoce.
@@ -199,6 +215,23 @@ class TestSuitesPorFuente:
             }
         )
         assert not validar(df, SUITES["inei"]).ok
+
+    def test_osinergmin_grifos_sin_codigo_osi_no_son_duplicados(self):
+        # Regresión: varios grifos sin codigo_osi vendiendo el mismo producto NO
+        # deben colapsar a la misma clave (antes fallaba la carga diaria).
+        assert validar(_osinergmin_ok(), SUITES["osinergmin"]).ok
+
+    def test_osinergmin_mismo_grifo_repetido_falla(self):
+        # Duplicado real: mismo establecimiento + dirección + producto el mismo día.
+        df = _osinergmin_ok()
+        df.loc[1, "establecimiento"] = "GRIFO A"
+        df.loc[1, "direccion"] = "AV. UNO 100"
+        assert not validar(df, SUITES["osinergmin"]).ok
+
+    def test_osinergmin_precio_negativo_falla(self):
+        df = _osinergmin_ok()
+        df.loc[0, "precio_soles_galon"] = "-1"
+        assert not validar(df, SUITES["osinergmin"]).ok
 
     def test_marketplace_precio_absurdo_es_advertencia(self):
         df = pd.DataFrame(
