@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       fuente:
-        description: 'Fuente a cargar (marketplace / sisap / ambas)'
+        description: 'Fuente a cargar (marketplace / sisap / osinergmin / inei / ambas; ambas = las 3 diarias, sin inei)'
         required: false
         default: 'ambas'
       fecha:
