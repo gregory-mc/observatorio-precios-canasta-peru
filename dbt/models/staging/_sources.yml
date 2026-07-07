@@ -1,0 +1,53 @@
+version: 2
+
+sources:
+  - name: bronze
+    schema: bronze
+    description: >
+      Capa Bronze — CSV crudos descargados de Cloudflare R2 e insertados en
+      Postgres por `observatorio.carga.r2_a_supabase`. Idempotente por partición
+      de fecha. Estas tablas son la única fuente de los modelos staging (silver).
+    tables:
+      - name: marketplace_precios
+        description: "Catálogo de precios de alimentos scrapeado del marketplace (un snapshot por día)."
+        columns:
+          - name: fecha_captura
+            description: "Fecha del snapshot (hora Lima)."
+          - name: product_id
+            description: "Identificador del producto en la fuente."
+          - name: precio
+            description: "Precio de venta observado."
+
+      - name: sisap_precios
+        description: "Precios minoristas/mayoristas de MIDAGRI-SISAP para Lima (días hábiles)."
+        columns:
+          - name: fecha_captura
+            description: "Fecha de captura (hora Lima)."
+          - name: tipo_mercado
+            description: "minorista | mayorista."
+          - name: producto
+            description: "Nombre del producto según SISAP."
+          - name: precio_prom
+            description: "Precio promedio del día."
+
+      - name: osinergmin_precios
+        description: "Precios de combustible por establecimiento (OSINERGMIN/Facilito), un CSV por día."
+        columns:
+          - name: fecha_captura
+            description: "Fecha de captura (hora Lima)."
+          - name: codigo_osi
+            description: "Código del establecimiento."
+          - name: producto
+            description: "Tipo de combustible."
+          - name: precio_soles_galon
+            description: "Precio en soles por galón."
+
+      - name: inei_ipc
+        description: "Serie histórica del IPC del INEI (carga one-shot, no diaria)."
+        columns:
+          - name: periodo
+            description: "Periodo del índice (anio+mes)."
+          - name: indice
+            description: "Valor del índice IPC."
+          - name: var_mensual
+            description: "Variación porcentual mensual."
