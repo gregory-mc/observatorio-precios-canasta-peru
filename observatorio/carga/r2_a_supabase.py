@@ -97,8 +97,14 @@ SQL_TIPOS = {
 # esperaban (p.ej. SISAP un fin de semana), se omite sin marcar fallo. Si falta
 # la clave, la fuente se espera todos los días.
 # --------------------------------------------------------------------------- #
-def _sisap_esperada(fecha: str) -> bool:
-    """SISAP solo publica en días hábiles peruanos (MIDAGRI cierra finde/feriados)."""
+def _esperada_dia_habil(fecha: str) -> bool:
+    """Datos esperados solo en días hábiles peruanos (sin findes ni feriados).
+
+    SISAP no publica finde/feriados (MIDAGRI cierra). OSINERGMIN comparte la
+    misma regla: aunque Facilito es un portal en vivo, su ingesta se opera como
+    diaria-hábil, así que un archivo faltante un finde/feriado es ausencia
+    legítima y no debe hacer fallar la carga.
+    """
     return es_dia_habil_peru(date.fromisoformat(fecha))
 
 
@@ -176,7 +182,7 @@ FUENTES = {
     "sisap": {
         "tabla": "sisap_precios",
         "columnas": COLUMNAS_SISAP,
-        "esperada": _sisap_esperada,
+        "esperada": _esperada_dia_habil,
         "tareas": lambda fecha: [
             (
                 f"sisap/{fecha}_sisap_lima_{tipo}.csv",
@@ -194,12 +200,14 @@ FUENTES = {
         "columnas": COLUMNAS_INEI,
         "tareas": lambda fecha: [("inei/ipc_historico.csv", "TRUE", ())],
     },
-    # OSINERGMIN: precios de combustible diarios (un CSV por día, todos los grifos
-    # del país). Facilito publica todos los días (incluso findes/feriados), así que
-    # se espera datos a diario — sin predicado ``esperada``.
+    # OSINERGMIN: precios de combustible (un CSV por día, todos los grifos del país).
+    # Su ingesta se opera como diaria-hábil, así que un archivo faltante un finde o
+    # feriado es ausencia legítima y no debe alertar (mismo criterio que SISAP). Sin
+    # este predicado, un solo día sin archivo hacía fallar toda la carga — ver #97.
     "osinergmin": {
         "tabla": "osinergmin_precios",
         "columnas": COLUMNAS_OSINERGMIN,
+        "esperada": _esperada_dia_habil,
         "tareas": lambda fecha: [
             (f"osinergmin/{fecha}_osinergmin_combustibles.csv", "fecha_captura = %s", (fecha,)),
         ],
