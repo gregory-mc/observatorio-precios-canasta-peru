@@ -1,0 +1,29 @@
+name: "observatorio"
+version: "1.0.0"
+config-version: 2
+
+# Perfil de conexión (ver profiles.yml en este mismo dir; DBT_PROFILES_DIR=dbt).
+profile: "observatorio"
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# Arquitectura medallion: bronze.* (cargado por observatorio.carga) es la fuente;
+# dbt construye silver (staging) → gold (marts). El nombre de schema se toma tal
+# cual gracias al override en macros/generate_schema_name.sql (sin prefijo del target).
+models:
+  observatorio:
+    staging:
+      +schema: silver
+      +materialized: view
+    marts:
+      +schema: gold
+      +materialized: table

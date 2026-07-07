@@ -1,0 +1,20 @@
+# Perfil de conexión de dbt a Supabase Postgres.
+#
+# Se versiona a propósito: no contiene secretos, sólo referencias a variables de
+# entorno (las mismas que ya usa el resto del pipeline, ver dbt/README.md). En
+# local se leen del .env; en GitHub Actions, de los secrets del repo.
+#
+# Uso: correr dbt con DBT_PROFILES_DIR=dbt (o desde dentro de dbt/).
+observatorio:
+  target: "{{ env_var('DBT_TARGET', 'prod') }}"
+  outputs:
+    prod:
+      type: postgres
+      host: "{{ env_var('SUPABASE_DB_HOST') }}"
+      port: "{{ env_var('SUPABASE_DB_PORT', '5432') | as_number }}"
+      user: "{{ env_var('SUPABASE_DB_USER') }}"
+      password: "{{ env_var('SUPABASE_DB_PASSWORD') }}"
+      dbname: "{{ env_var('SUPABASE_DB_NAME', 'postgres') }}"
+      schema: "{{ env_var('DBT_SCHEMA', 'silver') }}"
+      sslmode: require
+      threads: 4
