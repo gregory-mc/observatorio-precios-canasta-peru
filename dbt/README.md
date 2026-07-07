@@ -6,9 +6,17 @@ Transformaciones de la arquitectura medallion sobre Supabase Postgres:
 bronze.*  (cargado por observatorio.carga)  →  silver.*  (staging, dbt)  →  gold.*  (marts, dbt)
 ```
 
-Este proyecto se inicializa en el issue #22. Los modelos `staging` (silver) y
-`marts` (gold) se agregan en #23 y #24 respectivamente; por ahora solo están
-declaradas las **fuentes bronze** (`models/staging/_sources.yml`).
+Este proyecto se inicializa en #22. Los modelos **`staging` (silver)** ya están
+(#23): uno por fuente en bronze — `stg_marketplace_precios`, `stg_sisap_precios`,
+`stg_osinergmin_precios`, `stg_ipc_inei` — deduplicados, tipados y filtrados a
+observaciones válidas. Los **`marts` (gold)** también (#24): `fct_precio_diario`
+(hecho de precio diario conformado SISAP+Marketplace, grain fecha×fuente×depto×
+producto) y `dim_fecha`. Clima (SENAMHI, #14) se sumará como `stg_clima` cuando
+exista esa fuente.
+
+> Las tablas `gold.canasta_consumo_dept` y `gold.dim_departamento` las construye
+> Python desde la ENAHO (`observatorio/canasta/`, #19), no dbt. Conviven en el
+> mismo schema; el cruce precios × pesos (costo canasta) será un mart posterior.
 
 ## Conexión
 

@@ -1,0 +1,49 @@
+version: 2
+
+models:
+  - name: fct_precio_diario
+    description: >
+      Hecho de precio diario conformado desde las fuentes de precios de alimentos
+      (silver). Grain: (fecha_captura, fuente, cod_departamento, producto). SISAP
+      es Lima (cod '15'); Marketplace es nacional (cod_departamento null).
+      OSINERGMIN (combustible) queda fuera. La reducción a los 6 productos MVP y
+      el costo de canasta se harán en un mart posterior.
+    columns:
+      - name: fecha_captura
+        description: "Día de la observación (hora Lima). FK a dim_fecha.fecha."
+        tests: [not_null]
+      - name: fuente
+        description: "Origen del precio."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["sisap_minorista", "sisap_mayorista", "marketplace"]
+      - name: cod_departamento
+        description: "Departamento ('15' Lima para SISAP; null = nacional para Marketplace)."
+      - name: producto
+        description: "Nombre del producto tal como viene de la fuente. Parte del grano."
+        tests: [not_null]
+      - name: precio_prom
+        description: "Precio promedio de las observaciones del grano (> 0)."
+        tests: [not_null]
+      - name: precio_min
+        description: "Precio mínimo observado en el grano."
+      - name: precio_max
+        description: "Precio máximo observado en el grano."
+      - name: n_obs
+        description: "Número de observaciones agregadas en el grano."
+        tests: [not_null]
+
+  - name: dim_fecha
+    description: >
+      Dimensión de calendario (spine continuo) sobre el rango de fct_precio_diario.
+    columns:
+      - name: fecha
+        description: "Día. Clave de la dimensión."
+        tests: [not_null, unique]
+      - name: dia_semana
+        description: "Día de la semana ISO (1=lunes … 7=domingo)."
+        tests: [not_null]
+      - name: es_fin_semana
+        description: "True para sábado/domingo."
+        tests: [not_null]
