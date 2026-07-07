@@ -6,9 +6,11 @@ Transformaciones de la arquitectura medallion sobre Supabase Postgres:
 bronze.*  (cargado por observatorio.carga)  →  silver.*  (staging, dbt)  →  gold.*  (marts, dbt)
 ```
 
-Este proyecto se inicializa en el issue #22. Los modelos `staging` (silver) y
-`marts` (gold) se agregan en #23 y #24 respectivamente; por ahora solo están
-declaradas las **fuentes bronze** (`models/staging/_sources.yml`).
+Este proyecto se inicializa en #22. Los modelos **`staging` (silver)** ya están
+(#23): uno por fuente en bronze — `stg_marketplace_precios`, `stg_sisap_precios`,
+`stg_osinergmin_precios`, `stg_ipc_inei` — deduplicados, tipados y filtrados a
+observaciones válidas. Los **`marts` (gold)** llegan en #24. Clima (SENAMHI, #14)
+se sumará como `stg_clima` cuando exista esa fuente.
 
 ## Conexión
 

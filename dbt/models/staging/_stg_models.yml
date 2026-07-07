@@ -1,0 +1,72 @@
+version: 2
+
+models:
+  - name: stg_marketplace_precios
+    description: >
+      Precios del marketplace por SKU y fecha (silver). Deduplicado por
+      (fecha_captura, sku_id) y filtrado a filas con precio > 0.
+    columns:
+      - name: fecha_captura
+        description: "Fecha del snapshot (hora Lima)."
+        tests: [not_null]
+      - name: sku_id
+        description: "Identificador del SKU en la fuente. Grano junto con fecha_captura."
+        tests: [not_null]
+      - name: precio
+        description: "Precio de venta vigente (> 0 por construcción)."
+        tests: [not_null]
+      - name: precio_lista
+        description: "Precio de lista antes de descuento (puede ser null)."
+      - name: unidad_medida
+        description: "Unidad tal cual VTEX (normalizada a minúsculas): 'un', 'kg', 'lt'…"
+
+  - name: stg_sisap_precios
+    description: >
+      Precios SISAP (MIDAGRI) de Lima por producto y tipo de mercado (silver).
+      Deduplicado por (fecha_captura, tipo_mercado, producto) y filtrado a filas
+      con precio_prom > 0.
+    columns:
+      - name: fecha_captura
+        description: "Fecha de captura (hora Lima)."
+        tests: [not_null]
+      - name: tipo_mercado
+        description: "minorista | mayorista. Parte del grano."
+        tests: [not_null]
+      - name: producto
+        description: "Nombre del producto según SISAP. Parte del grano."
+        tests: [not_null]
+      - name: precio_prom
+        description: "Precio promedio del día (> 0 por construcción)."
+        tests: [not_null]
+
+  - name: stg_osinergmin_precios
+    description: >
+      Precios de combustible por establecimiento (OSINERGMIN/Facilito), silver.
+      Deduplicado por (fecha_captura, codigo_osi, producto_codigo) y filtrado a
+      filas con precio > 0. Nombres geográficos aún en su casing original.
+    columns:
+      - name: fecha_captura
+        description: "Fecha de captura (hora Lima)."
+        tests: [not_null]
+      - name: producto_codigo
+        description: "Código del combustible en Facilito ('126','127','40'). Parte del grano."
+        tests: [not_null]
+      - name: precio_soles_galon
+        description: "Precio en soles por galón (> 0 por construcción)."
+        tests: [not_null]
+
+  - name: stg_ipc_inei
+    description: >
+      Serie mensual del IPC de Lima Metropolitana (INEI), silver. Índice de
+      referencia (no precio) usado para validar la canasta vs IPC (#20).
+      Deduplicado por periodo.
+    columns:
+      - name: periodo
+        description: "Periodo YYYY-MM. Grano de la serie."
+        tests: [not_null, unique]
+      - name: fecha_mes
+        description: "Primer día del mes (derivado de anio/mes) para joins temporales."
+        tests: [not_null]
+      - name: indice
+        description: "Valor del índice IPC del mes."
+        tests: [not_null]
