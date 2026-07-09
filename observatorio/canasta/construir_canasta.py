@@ -324,7 +324,9 @@ def ejecutar(anio: int, ruta_dta: str, *, dry_run: bool, salida: str | None) -> 
         return 0
 
     import psycopg  # import perezoso: --dry-run no necesita la base
+    from dotenv import load_dotenv  # lee .env (SUPABASE_DB_URL), como el resto del pipeline
 
+    load_dotenv()
     log.info("⬆️  Cargando a gold.canasta_consumo_dept (idempotente por año %d)…", anio)
     with psycopg.connect(os.environ["SUPABASE_DB_URL"]) as conn:
         filas = cargar_a_gold(conn, df_canasta, anio)
