@@ -43,6 +43,7 @@ Documentación de las fuentes que alimentan el observatorio.
 | Fuente | Qué publica | Frecuencia | Formato real | URL | Código |
 |---|---|---|---|---|---|
 | **INEI — IPC Lima Metropolitana** | Índice de Precios al Consumidor, serie mensual general (base Dic 2021 = 100, continua desde 1994) | Mensual (carga manual) | Excel (.xlsx) → CSV | `https://www.inei.gob.pe/estadisticas/indice-tematico/price-indexes/` | `observatorio/ingesta/inei/` |
+| **SISAP histórico — MIDAGRI** | Precios minoristas/mayoristas históricos de la canasta básica en Lima (mismos productos que la ingesta diaria, hacia atrás) | One-shot (backfill) | HTML (mismo endpoint diario, por fecha) | `http://sistemas.midagri.gob.pe/sisap/portal2/ciudades/resumenes/filtrar` | `observatorio/ingesta/sisap/backfill_historico.py` |
 
 **INEI — IPC (issue #12)**
 - Es una descarga **one-shot**, no un cron diario: se dispara a mano desde el workflow **`Ingesta Histórica - IPC INEI`** (`.github/workflows/ingesta-inei.yml`, solo `workflow_dispatch`), que descarga → sube a R2 → carga a bronze en un solo run. En local equivale a `python -m observatorio.ingesta.inei.run_ingesta_inei` seguido de `python -m observatorio.carga.r2_a_supabase --fuente inei` (reemplazo total de la tabla).
@@ -50,6 +51,12 @@ Documentación de las fuentes que alimentan el observatorio.
 - El archivo masivo trae **solo el IPC general**, no el desglose por grupo (Alimentos). La hoja `Base Dic2021` ya reexpresa toda la serie desde 1994 en la base vigente → **no requiere empalme**. El desglose por grupo está solo en el servicio interactivo de gob.pe (pendiente, posible follow-up).
 - El portal del INEI presenta una **cadena de certificados TLS incompleta**; la descarga usa `verify=False` (solo archivos públicos).
 - **`www.inei.gob.pe` geo-bloquea IPs de datacenter** igual que el MIDAGRI: desde los runners de GitHub la descarga falla con `Network is unreachable` (Errno 101). Por eso el workflow corre en el **self-hosted runner** (IP peruana), el mismo que SISAP.
+
+**SISAP histórico — MIDAGRI (issue #16)**
+- Backfill **día por día** por el **mismo endpoint** del scraper diario. El portal **no permite agregación mensual** (`periodicidad=mes` siempre expira con "servidor sobrecargado") y cada request en `periodicidad=dia` devuelve **un solo día** (la fecha `hasta`), así que el histórico se arma consultando fechas individuales. Se confirmó data disponible al menos desde **2020**.
+- Carga **directo a `bronze.sisap_precios`** por psycopg (DELETE + COPY por `(fecha_captura, tipo_mercado)`, idempotente), reutilizando parser, `PrecioSisap` y el esquema de columnas de la carga. Se puede **muestrear** días (`--dias`) para balancear cobertura vs carga sobre la infra estatal. Requiere IP peruana igual que el diario.
+- Uso: `python -m observatorio.ingesta.sisap.backfill_historico --desde YYYY-MM-DD --hasta YYYY-MM-DD [--dias ...] [--tipos minorista,mayorista] [--productos ...] [--dry-run]`. Luego `dbt run` propaga a silver/gold.
+- **Primer backfill cargado** (este issue): 6 productos MVP (papa, pollo, huevo, cebolla, tomate, limón), minorista, Lima, **2024–2025** muestreando ~6 días/mes (`unidad_medida`/`equiv_kg_lt` quedaron NULL en ese lote). Extensible a más años, mayorista y toda la canasta re-corriendo el módulo.
 
 ---
 
@@ -66,7 +73,6 @@ Documentación de las fuentes que alimentan el observatorio.
 | Fuente | Qué publica | Frecuencia | Formato esperado | URL | Issue |
 |---|---|---|---|---|---|
 | **ENAHO — INEI** | Microdatos de gasto de hogares por departamento | Anual | SPSS / CSV | `https://www.inei.gob.pe/microdatos` | #13, #17, #19 |
-| **MIDAGRI histórico** | Series históricas de precios al productor | One-shot | Web / Excel | `http://sistemas.midagri.gob.pe` | #16 |
 
 ---
 
