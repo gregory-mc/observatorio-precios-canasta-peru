@@ -11,7 +11,8 @@ Este proyecto se inicializa en #22. Los modelos **`staging` (silver)** ya están
 `stg_osinergmin_precios`, `stg_ipc_inei` — deduplicados, tipados y filtrados a
 observaciones válidas. Los **`marts` (gold)** también (#24): `fct_precio_diario`
 (hecho de precio diario conformado SISAP+Marketplace, grain fecha×fuente×depto×
-producto) y `dim_fecha`. Clima (SENAMHI, #14) se sumará como `stg_clima` cuando
+producto), `fct_precio_medias_moviles` (medias móviles 7/30/90 días de calendario,
+#25) y `dim_fecha`. Clima (SENAMHI, #14) se sumará como `stg_clima` cuando
 exista esa fuente.
 
 > Las tablas `gold.canasta_consumo_dept` y `gold.dim_departamento` las construye

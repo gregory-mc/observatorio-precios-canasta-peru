@@ -34,6 +34,50 @@ models:
         description: "Número de observaciones agregadas en el grano."
         tests: [not_null]
 
+  - name: fct_precio_medias_moviles
+    description: >
+      Medias móviles de precio a 7 / 30 / 90 días de CALENDARIO por
+      (fuente, cod_departamento, producto), issue #25. Deriva de fct_precio_diario
+      (mismo grano, una fila por día observado). La ventana es de calendario, no de
+      N observaciones, porque las fuentes publican de forma esparsa; n_obs_* indica
+      cuántas observaciones cayeron en cada ventana (confiabilidad).
+    columns:
+      - name: fecha_captura
+        description: "Día de la observación (hora Lima). FK a dim_fecha.fecha."
+        tests: [not_null]
+      - name: fuente
+        description: "Origen del precio."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["sisap_minorista", "sisap_mayorista", "marketplace"]
+      - name: cod_departamento
+        description: "Departamento ('15' Lima para SISAP; null = nacional para Marketplace)."
+      - name: producto
+        description: "Nombre del producto tal como viene de la fuente. Parte del grano."
+        tests: [not_null]
+      - name: precio_prom
+        description: "Precio promedio del día (el mismo de fct_precio_diario)."
+        tests: [not_null]
+      - name: precio_ma_7d
+        description: "Media móvil del precio en la ventana de 7 días de calendario."
+        tests: [not_null]
+      - name: precio_ma_30d
+        description: "Media móvil del precio en la ventana de 30 días de calendario."
+        tests: [not_null]
+      - name: precio_ma_90d
+        description: "Media móvil del precio en la ventana de 90 días de calendario."
+        tests: [not_null]
+      - name: n_obs_7d
+        description: "Observaciones dentro de la ventana de 7 días (≥ 1)."
+        tests: [not_null]
+      - name: n_obs_30d
+        description: "Observaciones dentro de la ventana de 30 días."
+        tests: [not_null]
+      - name: n_obs_90d
+        description: "Observaciones dentro de la ventana de 90 días."
+        tests: [not_null]
+
   - name: dim_fecha
     description: >
       Dimensión de calendario (spine continuo) sobre el rango de fct_precio_diario.
