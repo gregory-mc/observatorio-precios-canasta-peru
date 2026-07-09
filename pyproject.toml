@@ -94,7 +94,7 @@ select = ["E", "F", "I", "UP", "B"]
 # ignoramos el import para que mypy valide nuestro código sin ahogarse en la
 # librería de terceros.
 [[tool.mypy.overrides]]
-module = ["pandas.*", "pyreadstat.*"]
+module = ["pandas.*", "pyreadstat.*", "prophet.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
