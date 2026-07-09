@@ -11,7 +11,11 @@ models:
     columns:
       - name: fecha_captura
         description: "Día de la observación (hora Lima). FK a dim_fecha.fecha."
-        tests: [not_null]
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_fecha')
+              field: fecha
       - name: fuente
         description: "Origen del precio."
         tests:
@@ -44,7 +48,11 @@ models:
     columns:
       - name: fecha_captura
         description: "Día de la observación (hora Lima). FK a dim_fecha.fecha."
-        tests: [not_null]
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_fecha')
+              field: fecha
       - name: fuente
         description: "Origen del precio."
         tests:
