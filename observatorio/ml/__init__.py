@@ -14,6 +14,10 @@ Módulos:
     config          Constantes de modelado (horizonte, umbral σ, mínimo de historia).
     datos           Carga de series desde ``gold.fct_precio_diario``.
     baseline        Pronósticos de referencia (naive, media móvil).
+    prophet_modelo  Pronóstico por serie: Prophet si hay historia, baseline si no.
+    backtesting     Walk-forward + MAPE/RMSE (valida Prophet vs baseline).
+    anomalias       Detección de anomalías (residuo normalizado > Nσ).
+    persistencia    Escritura de las tablas crudas del schema ``ml``.
 """
 
 from __future__ import annotations

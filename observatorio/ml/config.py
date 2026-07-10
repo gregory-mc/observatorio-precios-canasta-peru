@@ -30,5 +30,12 @@ HORIZONTE_DIAS: int = 14  # días hacia adelante a predecir
 # --- Baseline (referencia para el backtesting) ---------------------------------
 VENTANA_MEDIA_MOVIL_DIAS: int = 7  # ventana de calendario de la media móvil naive
 
+# --- Backtesting walk-forward --------------------------------------------------
+# Nº de cortes temporales (folds) y paso en días de calendario entre cortes. Con
+# el default se evalúan 5 ventanas separadas una semana; el corte más reciente
+# deja HORIZONTE_DIAS de observaciones reales por delante para comparar.
+N_FOLDS_BACKTEST: int = 5
+PASO_BACKTEST_DIAS: int = 7
+
 # --- Detección de anomalías ----------------------------------------------------
 UMBRAL_SIGMA: float = 2.5  # |residuo normalizado| por encima del cual es anomalía

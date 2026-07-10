@@ -112,10 +112,7 @@ def escribir_predicciones(
     url = db_url or os.environ["SUPABASE_DB_URL"]
     filas = _filas_para_insertar(df, fecha_corrida)
     placeholders = ", ".join(["%s"] * len(_COLS_INSERT))
-    insert = (
-        f"insert into ml.predicciones_raw ({', '.join(_COLS_INSERT)}) "
-        f"values ({placeholders})"
-    )
+    insert = f"insert into ml.predicciones_raw ({', '.join(_COLS_INSERT)}) values ({placeholders})"
 
     with psycopg.connect(url) as conn:
         with conn.cursor() as cur:
@@ -127,3 +124,151 @@ def escribir_predicciones(
             cur.executemany(insert, filas)
         conn.commit()
     return len(filas)
+
+
+# =============================================================================
+# Backtesting y anomalías — mismo contrato idempotente por corrida.
+# Las series de backtest/anomalías comparten el patrón de predicciones_raw; la
+# escritura se generaliza en _escribir_por_corrida. El DDL de referencia vive en
+# sql/ml_schema.sql y es idéntico al que se autocrea acá.
+# =============================================================================
+
+_COLS_BACKTEST = (
+    "fecha_corrida",
+    "fuente",
+    "cod_departamento",
+    "producto",
+    "modelo",
+    "n_folds",
+    "n_puntos",
+    "mape",
+    "rmse",
+    "horizonte",
+)
+
+DDL_BACKTEST = """
+create schema if not exists ml;
+
+create table if not exists ml.backtest_metricas (
+    fecha_corrida     date              not null,
+    fuente            text              not null,
+    cod_departamento  char(2),
+    producto          text              not null,
+    modelo            text              not null,
+    n_folds           integer           not null,
+    n_puntos          integer           not null,
+    mape              double precision  not null,
+    rmse              double precision  not null,
+    horizonte         integer           not null,
+    computed_at       timestamptz       not null default now(),
+    primary key (fecha_corrida, fuente, cod_departamento, producto, modelo)
+);
+"""
+
+_COLS_ANOMALIAS = (
+    "fecha_corrida",
+    "fuente",
+    "cod_departamento",
+    "producto",
+    "fecha",
+    "precio",
+    "esperado",
+    "residuo",
+    "z_score",
+    "metodo",
+    "umbral_sigma",
+)
+
+DDL_ANOMALIAS = """
+create schema if not exists ml;
+
+create table if not exists ml.anomalias_raw (
+    fecha_corrida     date              not null,
+    fuente            text              not null,
+    cod_departamento  char(2),
+    producto          text              not null,
+    fecha             date              not null,
+    precio            double precision  not null,
+    esperado          double precision  not null,
+    residuo           double precision  not null,
+    z_score           double precision  not null,
+    metodo            text              not null,
+    umbral_sigma      double precision  not null,
+    computed_at       timestamptz       not null default now(),
+    primary key (fecha_corrida, fuente, cod_departamento, producto, fecha)
+);
+"""
+
+
+def _escribir_por_corrida(
+    df: pd.DataFrame,
+    cols: tuple[str, ...],
+    tabla: str,
+    ddl: str,
+    fecha_corrida: date,
+    db_url: str | None,
+    fecha_cols: tuple[str, ...] = (),
+) -> int:
+    """Escribe ``df`` en ``tabla`` (schema ml), idempotente por ``fecha_corrida``.
+
+    Añade ``fecha_corrida``, convierte a ``date`` las columnas de ``fecha_cols`` y
+    normaliza los nulos (``_celda``). Borra las filas de la corrida e inserta las
+    nuevas en una transacción. ``tabla`` es una constante del módulo (no entrada
+    de usuario), así que interpolarla en el SQL es seguro.
+    """
+    if df.empty:
+        return 0
+
+    import psycopg
+
+    url = db_url or os.environ["SUPABASE_DB_URL"]
+    trabajo = df.copy()
+    trabajo["fecha_corrida"] = fecha_corrida
+    for c in fecha_cols:
+        trabajo[c] = pd.to_datetime(trabajo[c]).dt.date
+
+    filas = [
+        tuple(_celda(v) for v in registro)
+        for registro in trabajo[list(cols)].itertuples(index=False, name=None)
+    ]
+    placeholders = ", ".join(["%s"] * len(cols))
+    insert = f"insert into {tabla} ({', '.join(cols)}) values ({placeholders})"
+
+    with psycopg.connect(url) as conn:
+        with conn.cursor() as cur:
+            cur.execute(ddl)
+            cur.execute(f"delete from {tabla} where fecha_corrida = %s", (fecha_corrida,))
+            cur.executemany(insert, filas)
+        conn.commit()
+    return len(filas)
+
+
+def escribir_backtest_metricas(
+    df: pd.DataFrame, fecha_corrida: date, db_url: str | None = None
+) -> int:
+    """Escribe las métricas de backtest en ``ml.backtest_metricas``.
+
+    ``df`` trae la identidad de la serie, ``modelo`` y las métricas
+    (``n_folds, n_puntos, mape, rmse, horizonte``). Idempotente por corrida.
+    """
+    return _escribir_por_corrida(
+        df, _COLS_BACKTEST, "ml.backtest_metricas", DDL_BACKTEST, fecha_corrida, db_url
+    )
+
+
+def escribir_anomalias(df: pd.DataFrame, fecha_corrida: date, db_url: str | None = None) -> int:
+    """Escribe las anomalías detectadas en ``ml.anomalias_raw``.
+
+    ``df`` trae la identidad de la serie, el día anómalo (``fecha``) y su
+    puntuación (``precio, esperado, residuo, z_score, metodo, umbral_sigma``).
+    Idempotente por corrida.
+    """
+    return _escribir_por_corrida(
+        df,
+        _COLS_ANOMALIAS,
+        "ml.anomalias_raw",
+        DDL_ANOMALIAS,
+        fecha_corrida,
+        db_url,
+        fecha_cols=("fecha",),
+    )
