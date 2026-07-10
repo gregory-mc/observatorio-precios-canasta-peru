@@ -51,3 +51,36 @@ sources:
             description: "Valor del índice IPC."
           - name: var_mensual
             description: "Variación porcentual mensual."
+
+  - name: ml
+    schema: ml
+    description: >
+      Capa ML — salida CRUDA del modelado, escrita por `observatorio.ml` (Python).
+      Producto = nombre crudo de la fuente (grano de fct_precio_diario). dbt la lee
+      como source y construye los marts gold (fct_predicciones, fct_anomalias),
+      reduciendo el producto a los 6 slugs MVP. Python nunca escribe gold.
+    tables:
+      - name: predicciones_raw
+        description: "Pronósticos por serie y corrida (yhat + bandas). La escribe run_entrenamiento."
+        columns:
+          - name: fecha_corrida
+            description: "Día en que se corrió el batch (hora Lima)."
+          - name: producto
+            description: "Nombre crudo del producto según la fuente."
+          - name: fecha_pred
+            description: "Día pronosticado."
+          - name: yhat
+            description: "Pronóstico central."
+      - name: anomalias_raw
+        description: "Días con residuo normalizado > Nσ por serie y corrida. La escribe run_anomalias."
+        columns:
+          - name: fecha_corrida
+            description: "Día en que se corrió la detección (hora Lima)."
+          - name: producto
+            description: "Nombre crudo del producto según la fuente."
+          - name: fecha
+            description: "Día de la observación anómala."
+          - name: z_score
+            description: "Residuo normalizado."
+      - name: backtest_metricas
+        description: "Métricas de backtesting (MAPE/RMSE) por serie y modelo. Diagnóstica; sin mart gold."
