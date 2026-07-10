@@ -38,3 +38,44 @@ CREATE TABLE IF NOT EXISTS ml.predicciones_raw (
     -- sentinel (p.ej. '00') o cambiar el PK por un índice único con COALESCE.
     PRIMARY KEY (fecha_corrida, fuente, cod_departamento, producto, fecha_pred)
 );
+
+-- Métricas de backtesting walk-forward por serie, modelo y corrida. Una fila por
+-- (fecha_corrida, fuente, cod_departamento, producto, modelo). Sirve para validar
+-- que Prophet le gana a los baselines (comparar MAPE/RMSE entre modelos de la
+-- misma serie y corrida). La escribe observatorio/ml/run_backtesting.py.
+CREATE TABLE IF NOT EXISTS ml.backtest_metricas (
+    fecha_corrida     date              NOT NULL,
+    fuente            text              NOT NULL,
+    cod_departamento  char(2),
+    producto          text              NOT NULL,
+    modelo            text              NOT NULL,  -- prophet | media_movil | naive
+    n_folds           integer           NOT NULL,  -- cortes evaluados con puntos de test
+    n_puntos          integer           NOT NULL,  -- observaciones reales comparadas
+    mape              double precision  NOT NULL,  -- error porcentual absoluto medio (%)
+    rmse              double precision  NOT NULL,  -- raíz del error cuadrático medio
+    horizonte         integer           NOT NULL,  -- días pronosticados por fold
+    computed_at       timestamptz       NOT NULL DEFAULT now(),
+
+    PRIMARY KEY (fecha_corrida, fuente, cod_departamento, producto, modelo)
+);
+
+-- Anomalías de precio detectadas por serie y corrida (residuo normalizado > Nσ).
+-- Una fila por día anómalo: (fecha_corrida, fuente, cod_departamento, producto,
+-- fecha). La escribe observatorio/ml/run_anomalias.py; dbt construye
+-- gold.fct_anomalias a partir de ella.
+CREATE TABLE IF NOT EXISTS ml.anomalias_raw (
+    fecha_corrida     date              NOT NULL,
+    fuente            text              NOT NULL,
+    cod_departamento  char(2),
+    producto          text              NOT NULL,
+    fecha             date              NOT NULL,  -- día de la observación anómala
+    precio            double precision  NOT NULL,  -- precio observado ese día
+    esperado          double precision  NOT NULL,  -- nivel esperado (media móvil previa)
+    residuo           double precision  NOT NULL,  -- precio - esperado
+    z_score           double precision  NOT NULL,  -- residuo normalizado
+    metodo            text              NOT NULL,  -- 'residuo_vs_media_movil'
+    umbral_sigma      double precision  NOT NULL,  -- σ usado como corte
+    computed_at       timestamptz       NOT NULL DEFAULT now(),
+
+    PRIMARY KEY (fecha_corrida, fuente, cod_departamento, producto, fecha)
+);
