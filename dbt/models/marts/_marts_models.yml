@@ -99,3 +99,81 @@ models:
       - name: es_fin_semana
         description: "True para sábado/domingo."
         tests: [not_null]
+
+  - name: fct_predicciones
+    description: >
+      Pronóstico de precio reducido a los 6 productos MVP (issue #27). Deriva de
+      ml.predicciones_raw agregando las variedades crudas de SISAP a su slug MVP
+      (promedio de yhat y de las bandas). Grain: (fecha_corrida, fuente,
+      cod_departamento, producto, fecha_pred). Conserva todas las corridas.
+    columns:
+      - name: fecha_corrida
+        description: "Día en que se corrió el batch de pronóstico (hora Lima)."
+        tests: [not_null]
+      - name: fuente
+        description: "Origen del precio modelado (solo SISAP en el MVP de ML)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["sisap_minorista", "sisap_mayorista"]
+      - name: cod_departamento
+        description: "Departamento ('15' Lima para SISAP)."
+      - name: producto
+        description: "Slug del producto MVP."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["papa", "cebolla", "tomate", "huevo", "limon", "pollo"]
+      - name: fecha_pred
+        description: "Día pronosticado (futuro respecto a fecha_corrida)."
+        tests: [not_null]
+      - name: precio_pred
+        description: "Precio pronosticado (promedio de las variedades del slug)."
+        tests: [not_null]
+      - name: precio_pred_inf
+        description: "Banda inferior (promedio; null si el modelo fue baseline)."
+      - name: precio_pred_sup
+        description: "Banda superior (promedio; null si el modelo fue baseline)."
+      - name: modelo
+        description: "Modelo usado ('prophet' | 'media_movil' | 'naive' | 'mixto')."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["prophet", "media_movil", "naive", "mixto"]
+      - name: n_variedades
+        description: "Cuántas variedades crudas se agregaron en este slug."
+        tests: [not_null]
+
+  - name: fct_anomalias
+    description: >
+      Anomalías de precio reducidas a los 6 productos MVP (issue #28). Deriva de
+      ml.anomalias_raw agregando las variedades de un slug anómalas el mismo día;
+      reporta la desviación más fuerte (z_abs_max). Grain: (fecha_corrida, fuente,
+      cod_departamento, producto, fecha).
+    columns:
+      - name: fecha_corrida
+        description: "Día en que se corrió la detección (hora Lima)."
+        tests: [not_null]
+      - name: fuente
+        description: "Origen del precio (solo SISAP en el MVP de ML)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["sisap_minorista", "sisap_mayorista"]
+      - name: cod_departamento
+        description: "Departamento ('15' Lima para SISAP)."
+      - name: producto
+        description: "Slug del producto MVP."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["papa", "cebolla", "tomate", "huevo", "limon", "pollo"]
+      - name: fecha
+        description: "Día de la observación anómala."
+        tests: [not_null]
+      - name: z_abs_max
+        description: "Máximo |residuo normalizado| entre las variedades del slug."
+        tests: [not_null]
+      - name: umbral_sigma
+        description: "σ usado como corte."
+        tests: [not_null]
