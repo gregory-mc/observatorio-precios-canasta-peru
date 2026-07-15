@@ -1,0 +1,43 @@
+name: CI
+
+# Verifica la suite de tests en cada PR y en cada push a main. Es el primer
+# workflow que se dispara por push/PR (los demás son cron/dispatch de datos), así
+# que a partir de acá mergear SÍ verifica el código.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Un push nuevo cancela el run anterior de la misma rama (ahorra minutos).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    # Solo corre pytest (sin DB ni red): no aplica el geo-bloqueo del MIDAGRI, va en
+    # el runner estándar. Los tests que tocan conexión real (tests/conexion,
+    # tests/ingesta/sisap) ya están excluidos vía addopts en pyproject.toml.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      # Se instala solo lo que los tests importan de verdad: el paquete (pandas,
+      # psycopg, dotenv) + ingesta + carga + dev. Se OMITE el grupo `ml` a propósito:
+      # los módulos de ML solo importan pandas al top-level y Prophet se monkeypatchea
+      # en los tests, así que instalar Prophet (pesado, baja cmdstan) sería inútil.
+      - name: Instalar dependencias
+        run: pip install -e ".[ingesta,carga,dev]"
+
+      - name: Ejecutar pytest
+        run: pytest -q
