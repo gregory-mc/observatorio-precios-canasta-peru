@@ -17,9 +17,9 @@ jobs:
       contents: read
       issues: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
           cache: pip
@@ -34,7 +34,7 @@ jobs:
         run: python -m observatorio.ingesta.marketplace.scrape --salida data/bronze
 
       - name: Guardar snapshot como artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: marketplace-${{ github.run_id }}
           path: data/bronze/marketplace/
