@@ -15,6 +15,16 @@ producto), `fct_precio_medias_moviles` (medias móviles 7/30/90 días de calenda
 #25) y `dim_fecha`. Clima (SENAMHI, #14) se sumará como `stg_clima` cuando
 exista esa fuente.
 
+Los marts de **ML** (#35) leen la salida del batch de `observatorio/ml/`:
+`fct_predicciones` y `fct_anomalias`, ambos reducidos a los 6 slugs del MVP desde
+`ml.predicciones_raw` / `ml.anomalias_raw`. Requieren que el batch haya corrido
+antes (ver [docs/ml.md](../docs/ml.md)); si las tablas `ml.*` no existen todavía,
+excluirlos:
+
+```bash
+dbt build --exclude "fct_predicciones+" "fct_anomalias+"
+```
+
 > Las tablas `gold.canasta_consumo_dept` y `gold.dim_departamento` las construye
 > Python desde la ENAHO (`observatorio/canasta/`, #19), no dbt. Conviven en el
 > mismo schema; el cruce precios × pesos (costo canasta) será un mart posterior.
@@ -37,6 +47,12 @@ y usa el perfil `observatorio`. Variables requeridas:
 Son los mismos datos de conexión que `SUPABASE_DB_URL` (usado por la carga vía
 psycopg), pero dbt-postgres necesita los campos por separado.
 
+> **No hace falta crear esas 5 variables.** Ni el `.env` ni los secrets del repo
+> las tienen: lo único que existe es `SUPABASE_DB_URL`. Se derivan de ahí
+> parseando la URL antes de invocar dbt (verificado contra prod el 2026-07-22),
+> lo que deja una sola fuente de verdad y 0 secrets nuevos para el futuro
+> workflow. Recordá forzar el puerto **5432**: la URL apunta al pooler (6543).
+
 > **Nota sobre el pooler de Supabase.** dbt funciona mejor contra el puerto de
 > sesión / conexión directa (`5432`) que contra el *transaction pooler* (`6543`),
 > que no soporta prepared statements. La carga usa `6543`; para dbt preferí `5432`.
@@ -49,6 +65,11 @@ cd dbt
 
 dbt debug     # verifica conexión a Supabase
 dbt parse     # valida que el proyecto compila (sin conectar)
-dbt run       # (cuando existan modelos — #23/#24)
-dbt test      # (#26)
+dbt build     # construye modelos + corre sus tests
 ```
+
+> ⚠️ **dbt todavía no está automatizado**: no hay workflow que lo dispare, así que
+> los marts (que son `table`) solo se refrescan cuando alguien corre `dbt build` a
+> mano. Entre el 2026-07-08 y el 2026-07-22 nadie lo hizo y `gold` quedó 14 días
+> atrás mientras bronze y silver (que son `view`) seguían al día. Mientras no exista
+> ese workflow, conviene correrlo a diario. Ver `docs/estado_proyecto.md` §5.
