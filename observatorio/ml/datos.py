@@ -15,13 +15,13 @@ los 6 slugs es trabajo de un mart posterior, no de esta capa.
 
 from __future__ import annotations
 
-import os
 from collections.abc import Iterable
 from dataclasses import dataclass
 
 import pandas as pd
 
 from . import config
+from .conexion import conectar
 
 # Columnas mínimas que una serie necesita de fct_precio_diario.
 _COLUMNAS = ("fecha_captura", "fuente", "cod_departamento", "producto", "precio_prom")
@@ -129,18 +129,16 @@ def cargar_series(
 
     Filtra a las ``fuentes`` indicadas (por defecto, las del MVP de ML). La
     conexión se toma de ``db_url`` o, si no se pasa, de ``SUPABASE_DB_URL`` (el
-    mismo connection string del pooler de Supabase que usa la capa de carga).
+    mismo connection string del pooler de Supabase que usa la capa de carga),
+    vía ``conexion.conectar`` — sin prepared statements, que el pooler no admite.
     """
-    import psycopg
-
-    url = db_url or os.environ["SUPABASE_DB_URL"]
     fuentes = list(fuentes)
     consulta = (
         "select fecha_captura, fuente, cod_departamento, producto, precio_prom "
         "from gold.fct_precio_diario "
         "where fuente = any(%s)"
     )
-    with psycopg.connect(url) as conn, conn.cursor() as cur:
+    with conectar(db_url) as conn, conn.cursor() as cur:
         cur.execute(consulta, (fuentes,))
         filas = cur.fetchall()
         assert cur.description is not None  # siempre presente tras un SELECT

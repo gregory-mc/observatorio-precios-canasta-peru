@@ -173,6 +173,12 @@ def evaluar_serie(
     )
 
 
+# Modelos que compara el backtest. Se expone el nombre (no las funciones) porque
+# el runner necesita saber qué esperaba obtener para detectar un modelo caído
+# (ver cobertura.py); un test verifica que no se desalinee de _modelos_por_defecto.
+NOMBRES_MODELOS: tuple[str, ...] = ("prophet", "media_movil", "naive")
+
+
 def _modelos_por_defecto() -> dict[str, PronosticarFn]:
     """Modelos a comparar: Prophet vs los dos baselines.
 

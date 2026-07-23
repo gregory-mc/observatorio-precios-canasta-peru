@@ -8,14 +8,19 @@ EXISTS); el DDL de referencia vive en ``sql/ml_schema.sql``.
 
 ``_filas_para_insertar`` es una función pura (DataFrame → tuplas) testeable sin
 DB; ``escribir_predicciones`` es el envoltorio que abre la conexión y escribe.
+
+La conexión se abre siempre vía ``conexion.conectar``: el insert usa
+``executemany`` y eso, contra el pooler de Supabase, exige desactivar los
+prepared statements (ver ``conexion.py``).
 """
 
 from __future__ import annotations
 
-import os
 from datetime import date
 
 import pandas as pd
+
+from .conexion import conectar
 
 # Orden de columnas del insert; debe calzar con ml.predicciones_raw.
 _COLS_INSERT = (
@@ -107,14 +112,11 @@ def escribir_predicciones(
     if df.empty:
         return 0
 
-    import psycopg
-
-    url = db_url or os.environ["SUPABASE_DB_URL"]
     filas = _filas_para_insertar(df, fecha_corrida)
     placeholders = ", ".join(["%s"] * len(_COLS_INSERT))
     insert = f"insert into ml.predicciones_raw ({', '.join(_COLS_INSERT)}) values ({placeholders})"
 
-    with psycopg.connect(url) as conn:
+    with conectar(db_url) as conn:
         with conn.cursor() as cur:
             cur.execute(DDL)
             cur.execute(
@@ -219,9 +221,6 @@ def _escribir_por_corrida(
     if df.empty:
         return 0
 
-    import psycopg
-
-    url = db_url or os.environ["SUPABASE_DB_URL"]
     trabajo = df.copy()
     trabajo["fecha_corrida"] = fecha_corrida
     for c in fecha_cols:
@@ -234,7 +233,7 @@ def _escribir_por_corrida(
     placeholders = ", ".join(["%s"] * len(cols))
     insert = f"insert into {tabla} ({', '.join(cols)}) values ({placeholders})"
 
-    with psycopg.connect(url) as conn:
+    with conectar(db_url) as conn:
         with conn.cursor() as cur:
             cur.execute(ddl)
             cur.execute(f"delete from {tabla} where fecha_corrida = %s", (fecha_corrida,))
