@@ -145,6 +145,37 @@ confiable → se adoptó la opción B (validación por solidez interna).
 > fija con un puñado de cotas, no con una serie completa. Es la versión factible y
 > es lo que hoy endurece el chequeo de "precios plausibles".
 
+### Ampliar el canasto cierra la MAGNITUD, no el timing (hallazgo 2026-07-22)
+
+Tras backfillear el catálogo completo de SISAP a bronze (issue #16 — arroz, aceite,
+azúcar, leche… con histórico 2024–2025), se re-corrió el contraste con el subíndice
+de Alimentos (`PN01313PM`) para canastos cada vez más amplios (pesos iguales, proxy):
+
+| Canasto (Lima, sisap_minorista) | Volatilidad RMS MoM | Tracking error | Correlación |
+|---|---|---|---|
+| 6 frescos (MVP) | ±6.0% | 5.8 pp | 0.33 |
+| 14 (frescos + staples + carnes) | ±2.9% | **2.8 pp** | 0.34 |
+| solo 5 staples estables | ±0.5% | **0.63 pp** | 0.02 |
+
+**Conclusión:** ampliar el canasto **resuelve el problema de magnitud** — el tracking
+error se desploma (5.8 → 2.8 → 0.63 pp) y la volatilidad deja de ser ±10% para parecerse
+a la del índice oficial. Con un canasto representativo, la metodología reproduce la
+*escala* de la inflación oficial de alimentos. Lo que **no** se cierra es la
+**correlación** (~0.3): las variaciones mes-a-mes no van sincronizadas. Es una limitación
+de **datos**, no de método:
+- **Muestreo ralo** (~6 días/mes) → ruido en la variación mensual, que es justo lo que
+  mide la correlación.
+- **Alcance** → el índice oficial mezcla cientos de ítems y servicios (comidas fuera del
+  hogar) cuyo vaivén mensual no rastreamos.
+
+Los staples solos tienen correlación ~0 porque casi no se mueven (±0.5%): su micro-variación
+es ruido no correlacionado. La poca señal correlacionada la aportan los frescos. Confirma
+mantener el veredicto por **solidez interna** (opción B): la metodología es sólida; el
+timing mensual exacto no es replicable con esta granularidad de muestreo.
+
+> Pendiente para afinar (no bloquea): pesos reales de la ENAHO en vez de proxy (Paso #19
+> ampliado) y muestreo más denso de SISAP para reducir el ruido de la correlación.
+
 ### Mapeo de productos (precio → slug MVP)
 
 `gold.fct_precio_diario` trae nombres crudos; se reducen a los 6 slugs del MVP
@@ -207,6 +238,11 @@ Requiere `SUPABASE_DB_URL` (en el entorno o en `.env`).
   general da correlación 0.54 / TE 5.5 pp — divergencia **esperable** (frescos
   volátiles vs. agregado suave), no un defecto. Detalle y evidencia multi-benchmark
   en §"Por qué la correlación con el IPC no valida".
+- 🧪 **Backfill del catálogo completo (#16) + prueba de canasto ampliado**: con arroz,
+  aceite, azúcar, leche… ya en histórico, un canasto ampliado baja el tracking error de
+  5.8 a 2.8 pp (y a 0.63 pp con solo staples) → **la magnitud sí se cierra**; la
+  correlación (~0.3) no, por muestreo ralo y alcance. Ver §"Ampliar el canasto cierra la
+  MAGNITUD, no el timing".
 - 🔎 **Nota de dato antiguo**: una versión previa de este doc decía "0 meses en
   común / esperar a ago-sep 2026". Era incorrecto: el backfill histórico de SISAP da
   24 meses de solape. Corregido.
