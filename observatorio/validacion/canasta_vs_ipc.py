@@ -1,30 +1,35 @@
-"""Validación de la metodología de la canasta contra el IPC del INEI — issue #20.
+"""Validación de la metodología de la canasta — issue #20.
 
 Construye un índice de precios propio ponderado por los pesos de
 `gold.canasta_consumo_dept` (derivados de la ENAHO) sobre las series de precios
-de `gold.fct_precio_diario`, y lo compara contra la serie oficial del IPC de
-Lima Metropolitana (`silver.stg_ipc_inei`). Si nuestro índice sigue al IPC
-oficial (correlación alta, tracking error bajo) en su variación mensual, la
-metodología de la canasta queda validada.
+de `gold.fct_precio_diario`, valida su **solidez interna** y lo contrasta —de
+forma descriptiva— contra el IPC oficial del INEI (`silver.stg_ipc_inei`).
 
-**Diseño de la comparación** (ver docs/validacion_canasta_vs_ipc.md para el
-detalle y los caveats):
+**Enfoque de validación (opción B, decidido 2026-07-22).** Nuestro índice sigue
+6 alimentos frescos (papa, pollo, huevo, cebolla, tomate, limón) que son de los
+productos MÁS volátiles de cualquier canasta (±10% mes a mes). Ningún índice
+oficial publicado mide ese mismo canasto: el IPC general y hasta el subíndice de
+"Alimentos y Bebidas" del INEI/BCRP promedian cientos de productos, casi todos
+estables (±1%). Verificado empíricamente (ver docs/validacion_canasta_vs_ipc.md):
+correlacionar nuestro índice contra cualquier agregado oficial, sea mes a mes,
+interanual o por tendencia, da NO CONCLUYENTE — no por un defecto nuestro, sino
+porque compara canastos distintos por naturaleza. Por eso **la correlación con el
+IPC NO es criterio de validación**; queda como contexto descriptivo.
 
-  1. Precio mensual por producto MVP: promedio de las presentaciones de cada
-     producto (mapeo `MAPEO_PRECIO_MVP`) sobre los días del mes, para una fuente
-     y un departamento dados (default: `sisap_minorista`, Lima = dep 15, que es
-     el ámbito del IPC disponible).
-  2. Índice tipo Laspeyres de base fija: `I_t = 100 · Σ w_p · (P_{p,t}/P_{p,0})`,
-     con `w_p` los pesos de la canasta del departamento, renormalizados sobre los
-     productos con precio disponible (Σ w = 1). Base = primer mes con datos.
-  3. Variación mensual propia `var% = I_t/I_{t-1} − 1` vs `var_mensual` del IPC.
-  4. Métricas sobre los meses en común: correlación de Pearson, tracking error
-     (desvío de las diferencias) y diferencia absoluta media.
+La metodología se valida por la **solidez interna del índice** (``evaluar_solidez``),
+que es lo que sí delataría una canasta rota:
 
-El script es un **reporte**: nunca escribe a la base. Si todavía no hay meses en
-común entre nuestros precios y el IPC publicado (situación al 2026-07: precios
-jun–jul 2026 vs IPC ≤ may 2026), imprime el estado "PENDIENTE por datos" con la
-señal descriptiva disponible, sin fallar.
+  1. Pesos que suman 1 sobre los productos del MVP con precio.
+  2. Cobertura de productos estable mes a mes (sin saltos por entradas/salidas).
+  3. Precios en rango de sanidad (atrapa errores de unidad/parseo).
+  4. Serie mensual sin huecos (aviso).
+
+El índice se arma con un Laspeyres de base fija:
+`I_t = 100 · Σ w_p · (P_{p,t}/P_{p,0})`, base = primer mes con datos. La
+comparación descriptiva contra el IPC usa la variación mensual propia
+(`var% = I_t/I_{t-1} − 1`) vs `var_mensual` del IPC en los meses en común.
+
+El script es un **reporte**: nunca escribe a la base.
 
 Uso:
     python -m observatorio.validacion.canasta_vs_ipc                 # Lima, sisap_minorista
@@ -56,13 +61,23 @@ MAPEO_PRECIO_MVP: dict[str, tuple[str, ...]] = {
     "limon": ("Limon%", "Limón%"),
 }
 
-# Umbrales de suficiencia de datos.
-MIN_MESES_INDICE = 2  # hacen falta ≥2 meses para 1 punto de variación mensual.
-MIN_OVERLAP = 3  # ≥3 meses en común para una correlación con sentido.
+# Umbral de suficiencia para los estadísticos descriptivos del contraste con IPC.
+MIN_OVERLAP = 3  # ≥3 meses en común para calcular correlación/tracking error.
 
-# Umbrales del veredicto (sobre los meses en común, cuando los haya).
-CORR_MINIMA = 0.6  # correlación de Pearson mínima para "sigue al IPC".
-TRACKING_MAX = 1.5  # tracking error (pp) máximo tolerado.
+# --- Criterios de SOLIDEZ INTERNA (el veredicto real, opción B) --------------- #
+# Rango de sanidad para precios de alimentos frescos en S/ por kg. NO es un límite
+# de negocio: es amplísimo a propósito. Solo atrapa errores de unidad/parseo (un
+# fresco a S/ 500/kg es casi seguro basura); la volatilidad normal cae holgada.
+RANGO_PLAUSIBLE_SOLKG = (0.1, 100.0)
+# Fracción mínima de meses en que deben estar TODOS los productos con peso, para
+# que la composición del índice sea estable (sin saltos por entradas/salidas).
+COBERTURA_MINIMA = 0.9
+
+# --- Estadísticos DESCRIPTIVOS del contraste con el IPC (NO son criterio) ----- #
+# Se reportan como contexto; ver docstring: la canasta de frescos diverge del IPC
+# agregado por naturaleza, así que estos números no aprueban ni reprueban nada.
+CORR_REFERENCIA = 0.6  # referencia informativa de correlación.
+TRACKING_REFERENCIA = 1.5  # referencia informativa de tracking error (pp).
 
 
 # --------------------------------------------------------------------------- #
@@ -145,7 +160,6 @@ def comparar(
         "tracking_error": None,
         "dif_abs_media": None,
         "suficiente": False,
-        "veredicto": None,
     }
     if len(pares) >= MIN_OVERLAP:
         difs = [n - i for _, n, i in pares]
@@ -154,11 +168,82 @@ def comparar(
         res["tracking_error"] = (sum((d - media) ** 2 for d in difs) / len(difs)) ** 0.5
         res["correlacion"] = _pearson([n for _, n, _ in pares], [i for _, _, i in pares])
         res["suficiente"] = True
-        corr = res["correlacion"]
-        te = res["tracking_error"]
-        ok = (corr is not None and corr >= CORR_MINIMA) and (te is not None and te <= TRACKING_MAX)
-        res["veredicto"] = "VALIDADA" if ok else "NO CONCLUYENTE"
     return res
+
+
+def evaluar_solidez(
+    precios_mensuales: dict[str, dict[str, float]],
+    pesos: dict[str, float],
+    indice: list[tuple[str, float, float | None]],
+) -> dict:
+    """Valida la SOLIDEZ INTERNA del índice de canasta — el veredicto real (opción B).
+
+    Nuestro índice sigue 6 alimentos frescos volátiles; NO es una réplica del IPC
+    agregado, así que correlacionar contra el IPC no valida nada (ver docstring del
+    módulo y docs/validacion_canasta_vs_ipc.md). En su lugar chequeamos que el
+    índice sea internamente sano — los defectos que sí delatarían una canasta rota:
+
+      * ``pesos_suman_1``   — los pesos del MVP suman 1.0 (± 1e-6).
+      * ``cobertura``       — fracción de meses con TODOS los productos con peso
+                              presentes ≥ COBERTURA_MINIMA (composición estable).
+      * ``precios_plausibles`` — todo precio mensual dentro de RANGO_PLAUSIBLE_SOLKG.
+      * ``serie_continua``  — sin huecos en el tramo mensual cubierto (solo aviso).
+
+    Los tres primeros son el gate (``veredicto`` = "CANASTA SÓLIDA" / "REVISAR");
+    la continuidad es informativa. Función pura: no lee la base.
+    """
+    productos_con_peso = [p for p, w in pesos.items() if w and w > 0]
+    meses = sorted(precios_mensuales)
+
+    suma_pesos = sum(pesos[p] for p in productos_con_peso)
+    ok_pesos = abs(suma_pesos - 1.0) <= 1e-6
+
+    if meses and productos_con_peso:
+        completos = sum(
+            1 for m in meses if all(precios_mensuales[m].get(p) for p in productos_con_peso)
+        )
+        cobertura = completos / len(meses)
+    else:
+        cobertura = 0.0
+    ok_cobertura = cobertura >= COBERTURA_MINIMA
+
+    lo, hi = RANGO_PLAUSIBLE_SOLKG
+    fuera_rango = [
+        (m, p, pr)
+        for m in meses
+        for p, pr in precios_mensuales[m].items()
+        if pr is not None and not (lo <= pr <= hi)
+    ]
+    ok_precios = not fuera_rango
+
+    def _ym(s: str) -> int:
+        anio, mes = s.split("-")
+        return int(anio) * 12 + int(mes) - 1
+
+    huecos: list[str] = []
+    if len(meses) >= 2:
+        ini, fin = _ym(meses[0]), _ym(meses[-1])
+        presentes = {_ym(m) for m in meses}
+        huecos = [
+            f"{n // 12:04d}-{n % 12 + 1:02d}" for n in range(ini, fin + 1) if n not in presentes
+        ]
+
+    solida = ok_pesos and ok_cobertura and ok_precios
+    return {
+        "n_meses": len(meses),
+        "n_productos": len(productos_con_peso),
+        "checks": {
+            "pesos_suman_1": {"ok": ok_pesos, "suma": suma_pesos},
+            "cobertura": {"ok": ok_cobertura, "fraccion": cobertura, "minima": COBERTURA_MINIMA},
+            "precios_plausibles": {
+                "ok": ok_precios,
+                "fuera_rango": fuera_rango[:10],
+                "rango": RANGO_PLAUSIBLE_SOLKG,
+            },
+            "serie_continua": {"ok": not huecos, "huecos": huecos},
+        },
+        "veredicto": "CANASTA SÓLIDA" if solida else "REVISAR",
+    }
 
 
 # --------------------------------------------------------------------------- #
@@ -239,10 +324,10 @@ def cargar(conn, *, fuente: str, cod_dep: str, anio_canasta: int | None):
 # Reporte
 # --------------------------------------------------------------------------- #
 def _reporte(
-    res: dict, precios: dict, pesos: dict, indice: list, *, fuente: str, cod_dep: str
+    res: dict, solidez: dict, precios: dict, pesos: dict, indice: list, *, fuente: str, cod_dep: str
 ) -> None:
     print("\n" + "=" * 70)
-    print(f"  VALIDACIÓN CANASTA vs IPC — fuente={fuente}  dep={cod_dep}")
+    print(f"  VALIDACIÓN CANASTA (solidez interna) — fuente={fuente}  dep={cod_dep}")
     print("=" * 70)
 
     print(f"\nProductos con peso de canasta: {sorted(pesos)}")
@@ -252,53 +337,44 @@ def _reporte(
         vtxt = "  —" if var is None else f"{var:+6.2f}%"
         print(f"   {mes}   índice={ind:7.2f}   varMoM={vtxt}")
 
+    # --- Veredicto REAL: solidez interna del índice ------------------------- #
+    print("\n--- SOLIDEZ INTERNA (criterio de validación) ---")
+    c = solidez["checks"]
+    m = "✓" if c["pesos_suman_1"]["ok"] else "✗"
+    print(f"   [{m}] pesos suman 1.0            (Σ = {c['pesos_suman_1']['suma']:.6f})")
+    m = "✓" if c["cobertura"]["ok"] else "✗"
     print(
-        f"\nMeses de IPC publicados: {res['meses_ipc'][:3]} … {res['meses_ipc'][-3:]}"
-        if len(res["meses_ipc"]) > 6
-        else f"\nMeses de IPC publicados: {res['meses_ipc']}"
+        f"   [{m}] cobertura de productos      "
+        f"({c['cobertura']['fraccion']:.0%} de meses completos; mín {c['cobertura']['minima']:.0%})"
     )
-    print(f"Meses en común (para comparar): {res['meses_comunes'] or '(ninguno)'}")
+    m = "✓" if c["precios_plausibles"]["ok"] else "✗"
+    lo, hi = c["precios_plausibles"]["rango"]
+    detalle = "" if c["precios_plausibles"]["ok"] else f" fuera: {c['precios_plausibles']['fuera_rango']}"
+    print(f"   [{m}] precios plausibles         (rango S/{lo}-{hi}/kg){detalle}")
+    m = "✓" if c["serie_continua"]["ok"] else "!"
+    huecos = c["serie_continua"]["huecos"]
+    print(f"   [{m}] serie continua             ({'sin huecos' if not huecos else 'huecos: ' + ', '.join(huecos)})  [aviso]")
+    print(f"\n   VEREDICTO: {solidez['veredicto']}")
 
+    # --- Contexto descriptivo: contraste con el IPC (NO es criterio) -------- #
+    print("\n--- CONTEXTO: contraste con el IPC oficial (descriptivo, NO valida) ---")
+    print(
+        "   Nota: nuestra canasta son 6 frescos muy volátiles; el IPC agregado casi\n"
+        "   no se mueve. Que diverjan es esperable y NO indica un defecto de método\n"
+        "   (ver docs/validacion_canasta_vs_ipc.md)."
+    )
+    print(f"   Meses en común: {res['meses_comunes'] or '(ninguno)'}")
     if res["suficiente"]:
-        print("\n--- MÉTRICAS (meses en común) ---")
-        for mes, n, i in res["pares"]:
-            print(f"   {mes}   propia={n:+6.2f}%   IPC={i:+6.2f}%   dif={n - i:+6.2f}pp")
-        print(f"\n   correlación Pearson : {res['correlacion']:.3f}  (mín {CORR_MINIMA})")
-        print(f"   tracking error      : {res['tracking_error']:.3f} pp  (máx {TRACKING_MAX})")
+        print(
+            f"   correlación Pearson : {res['correlacion']:.3f}  (referencia {CORR_REFERENCIA})"
+        )
+        print(
+            f"   tracking error      : {res['tracking_error']:.3f} pp  "
+            f"(referencia {TRACKING_REFERENCIA})"
+        )
         print(f"   dif. absoluta media : {res['dif_abs_media']:.3f} pp")
-        print(f"\n   VEREDICTO: {res['veredicto']}")
     else:
-        print("\n--- ESTADO: PENDIENTE POR DATOS ---")
-        n_var = len(res["meses_con_variacion"])
-        if n_var < 1:
-            n_precios = len(res["meses_indice"])
-            print(
-                f"   No hay ni un punto de variación mensual propia "
-                f"(se necesitan ≥{MIN_MESES_INDICE} meses de precios; hay {n_precios})."
-            )
-        elif not res["meses_comunes"]:
-            print(
-                "   No hay solape temporal: nuestros precios y el IPC publicado no "
-                "comparten ningún mes."
-            )
-            ult_ipc = res["meses_ipc"][-1] if res["meses_ipc"] else "—"
-            print(f"     · meses con variación propia : {res['meses_con_variacion']}")
-            print(f"     · último mes de IPC publicado: {ult_ipc}")
-        else:
-            print(
-                f"   Solo {len(res['meses_comunes'])} mes(es) en común; se necesitan "
-                f"≥{MIN_OVERLAP} para una correlación con sentido."
-            )
-        # Señal descriptiva (NO es la validación): variación propia disponible.
-        if res["meses_con_variacion"]:
-            ult = res["meses_con_variacion"][-1]
-            propia = next(v for m, _, v in indice if m == ult)
-            print(
-                f"\n   Señal descriptiva (no comparable aún): variación propia "
-                f"{ult} = {propia:+.2f}% ; IPC de referencia (otro mes) ≈ "
-                f"{res['meses_ipc'][-1] if res['meses_ipc'] else '—'}."
-            )
-        print("\n   → Rehacer cuando el INEI publique un mes que solape con los precios.")
+        print("   (sin suficientes meses en común para estadísticos; solo contexto)")
     print("=" * 70 + "\n")
 
 
@@ -345,8 +421,10 @@ def main(argv: list[str] | None = None) -> int:
 
     indice = construir_indice(precios, pesos)
     res = comparar(indice, ipc_var)
-    _reporte(res, precios, pesos, indice, fuente=args.fuente, cod_dep=args.dep)
-    return 0
+    solidez = evaluar_solidez(precios, pesos, indice)
+    _reporte(res, solidez, precios, pesos, indice, fuente=args.fuente, cod_dep=args.dep)
+    # El veredicto real es la solidez interna; el contraste con el IPC no gatilla.
+    return 0 if solidez["veredicto"] == "CANASTA SÓLIDA" else 4
 
 
 if __name__ == "__main__":

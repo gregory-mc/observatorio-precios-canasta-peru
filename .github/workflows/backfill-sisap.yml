@@ -1,0 +1,100 @@
+name: Backfill Histórico SISAP (manual)
+
+# One-shot administrativo para ampliar el histórico de SISAP en bronze
+# (issue #16). Corre en el self-hosted runner porque MIDAGRI geo-bloquea IPs no
+# peruanas. Escribe DIRECTO a Supabase (bronze.sisap_precios) vía psycopg, de
+# forma idempotente por (fecha_captura, tipo_mercado) → re-correr una fecha la
+# reemplaza limpio. Solo se dispara a mano (workflow_dispatch) y arranca en
+# dry-run por defecto: hay que poner dry_run=false explícitamente para escribir.
+
+on:
+  workflow_dispatch:
+    inputs:
+      desde:
+        description: 'Fecha inicial YYYY-MM-DD'
+        required: true
+        default: '2024-01-01'
+      hasta:
+        description: 'Fecha final YYYY-MM-DD'
+        required: true
+        default: '2025-12-31'
+      dias:
+        description: 'Días-del-mes a muestrear (coma-separados). Mismos que el backfill original.'
+        required: false
+        default: '4,9,14,19,24,28'
+      tipos:
+        description: 'Tipos de mercado (minorista,mayorista)'
+        required: false
+        default: 'minorista,mayorista'
+      productos:
+        description: 'IDs de producto SISAP coma-separados. VACÍO = catálogo completo (51 productos).'
+        required: false
+        default: ''
+      dry_run:
+        description: 'true = NO escribe (solo reporta cobertura). Poné false para cargar a bronze.'
+        required: false
+        default: 'true'
+
+jobs:
+  backfill:
+    runs-on: self-hosted
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - name: 📥 Clonar el repositorio
+        uses: actions/checkout@v7
+
+      - name: 🐍 Configurar Python 3.10
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.10'
+
+      - name: 🛠️ Instalar dependencias (ingesta + carga)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[ingesta,carga]"
+
+      - name: 🛰️ Ejecutar backfill histórico
+        shell: powershell
+        env:
+          PYTHONUTF8: "1"
+          PYTHONPATH: ${{ github.workspace }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          DESDE: ${{ inputs.desde }}
+          HASTA: ${{ inputs.hasta }}
+          DIAS: ${{ inputs.dias }}
+          TIPOS: ${{ inputs.tipos }}
+          PRODUCTOS: ${{ inputs.productos }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          $backArgs = @("--desde", $env:DESDE, "--hasta", $env:HASTA, "--dias", $env:DIAS, "--tipos", $env:TIPOS)
+          if ($env:PRODUCTOS) { $backArgs += @("--productos", $env:PRODUCTOS) }
+          if ($env:DRY_RUN -eq "true") { $backArgs += "--dry-run" }
+          Write-Host "Ejecutando: backfill_historico $backArgs"
+          python -m observatorio.ingesta.sisap.backfill_historico @backArgs
+
+      - name: 🚨 Crear issue de alerta por fallo
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: powershell
+        run: |
+          $fechaLima = (Get-Date).ToUniversalTime().AddHours(-5).ToString("yyyy-MM-dd")
+          $titulo = "ALERTA [SISAP backfill] Fallo $fechaLima"
+          $runUrl = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          $lineas = @(
+            "## Fallo en el backfill histórico de SISAP",
+            "",
+            "El workflow **${{ github.workflow }}** falló el $fechaLima.",
+            "",
+            "**Parámetros:** desde=${{ inputs.desde }} hasta=${{ inputs.hasta }} dry_run=${{ inputs.dry_run }}",
+            "- Runner: ${{ runner.name }}",
+            "- Run: $runUrl",
+            "",
+            "> Issue auto-creado por GitHub Actions — revisar logs del run."
+          )
+          $bodyFile = Join-Path $env:RUNNER_TEMP "alerta_backfill.txt"
+          $lineas | Out-File -FilePath $bodyFile -Encoding utf8
+          gh issue create --title $titulo --body-file $bodyFile --label "area:devops"

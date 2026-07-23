@@ -153,6 +153,14 @@ Ojo con los casos que confunden: **Lima** = ubigeo `15`, **Callao** = ubigeo `07
 dimensión es un **prerequisito chico de #19** (no de #17), pero se documenta acá porque
 condiciona el diseño de la clave (se eligió ubigeo como llave canónica por ser estable).
 
+> **Actualización 2026-07-22 (verificado en prod, lectura):** el join precio×canasta
+> terminó llaveándose por `cod_departamento`, no por nombre de región. El mart
+> `fct_precio_diario.sql` mapea SISAP→`'15'` (Lima) y Marketplace→NULL (nacional)
+> directamente, y `SELECT DISTINCT region FROM bronze.sisap_precios` devuelve solo
+> `'Lima'`. Por eso **no hay nombres que reconciliar** y `region_sisap`/`dim_departamento`
+> no están en ningún camino de join hoy (la tabla ni siquiera se cargó). `dim_departamento`
+> sigue siendo útil como mapeo código→nombre para el dashboard (M5).
+
 ---
 
 ## 6. Capa y materialización
@@ -214,5 +222,8 @@ pendiente de correr contra los microdatos reales; si apareciera, preferir el có
 ### Genuinamente pendiente (no es código)
 - Conseguir el **código INEI** de la ENAHO más reciente (2024/2025) para recargar con
   `--anio` y reemplazar 2023 (afecta los pesos; ver `docs/enaho.md` §"Año utilizado").
-- Reconciliar `dim_departamento.region_sisap` con los valores reales de SISAP.
+- ~~Reconciliar `dim_departamento.region_sisap` con los valores reales de SISAP.~~
+  ✅ **Resuelto 2026-07-22 (verificado en prod):** SISAP solo emite `'Lima'` (=`'15'`) y el
+  cruce precio×canasta se hace por `cod_departamento` (no por nombre), así que no hay nada
+  que reconciliar. Ver §5.
 ```

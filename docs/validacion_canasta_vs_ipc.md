@@ -1,22 +1,38 @@
-# Validación de la canasta contra el IPC (issue #20)
+# Validación de la canasta (issue #20)
 
-Cómo validamos que la **metodología de la canasta** (pesos derivados de la ENAHO,
-ver [`canasta_consumo_dept.md`](canasta_consumo_dept.md)) produce un índice de
-precios coherente con el **IPC oficial** del INEI. Implementado en
+Cómo validamos la **metodología de la canasta** (pesos derivados de la ENAHO,
+ver [`canasta_consumo_dept.md`](canasta_consumo_dept.md)). Implementado en
 [`observatorio/validacion/canasta_vs_ipc.py`](../observatorio/validacion/canasta_vs_ipc.py).
 
-> El script es un **reporte de solo lectura**: nunca escribe a la base. Se puede
-> correr en cualquier momento; degrada con elegancia cuando todavía no hay datos
-> suficientes.
+> El script es un **reporte de solo lectura**: nunca escribe a la base.
 
 ---
 
-## Idea
+## Enfoque de validación (opción B — decidido 2026-07-22)
 
-Si nuestros pesos de canasta y nuestro tracking de precios son metodológicamente
-sanos, un índice de precios propio construido con ellos debería **seguir la
-variación** del IPC oficial. No buscamos que los niveles coincidan (bases
-distintas), sino que las **variaciones mensuales** se muevan juntas.
+> **El criterio de validación es la SOLIDEZ INTERNA del índice, NO su correlación
+> con el IPC oficial.** El contraste con el IPC se conserva como contexto
+> descriptivo, pero no aprueba ni reprueba nada. El porqué está en §"Por qué la
+> correlación con el IPC no valida" más abajo.
+
+**Se valida** (`evaluar_solidez`) que el índice propio sea internamente sano —lo
+que sí delataría una canasta rota—:
+
+1. **Pesos suman 1.0** (± 1e-6) sobre los productos del MVP con precio.
+2. **Cobertura de productos estable**: ≥ 90% de los meses con todos los productos
+   presentes (evita saltos artificiales por entradas/salidas de productos).
+3. **Precios plausibles**: todo precio mensual en S/ 0.1–100/kg (atrapa errores de
+   unidad/parseo; la volatilidad normal de los frescos cae holgada dentro).
+4. **Serie continua**: sin huecos mensuales (solo **aviso**, no bloquea).
+
+Los tres primeros son el gate → veredicto `CANASTA SÓLIDA` / `REVISAR`.
+
+## Contexto descriptivo: contraste con el IPC (no valida)
+
+Aún así construimos un índice de precios propio y comparamos su variación mensual
+contra el IPC oficial, como **señal descriptiva**. La idea original era: si los
+pesos y el tracking son sanos, el índice propio debería **seguir la variación**
+del IPC. Resultó que no —y no por un defecto nuestro— como explica §"Por qué…".
 
 ## Insumos
 
@@ -44,10 +60,43 @@ distintas), sino que las **variaciones mensuales** se muevan juntas.
 
 ### Veredicto
 
-Sobre los meses en común, la metodología se considera **VALIDADA** si
-`correlación ≥ 0.6` y `tracking error ≤ 1.5 pp`; si no, **NO CONCLUYENTE**.
-Sin meses en común suficientes, el estado es **PENDIENTE POR DATOS** (no es un
-fracaso: es falta de solape temporal).
+El veredicto lo da la **solidez interna** (ver arriba): `CANASTA SÓLIDA` o
+`REVISAR`. La correlación y el *tracking error* contra el IPC se **reportan como
+referencia** (0.6 y 1.5 pp) pero **no gatillan** el veredicto — ver la sección
+siguiente sobre por qué.
+
+## Por qué la correlación con el IPC no valida (hallazgo empírico 2026-07-22)
+
+Se corrió la comparación contra tres benchmarks oficiales y tres lentes, sobre
+23–24 meses en común (ene-2024 a dic-2025, gracias al backfill histórico de
+SISAP). **Todas dieron NO CONCLUYENTE:**
+
+| Comparación | correlación | tracking error | resultado |
+|---|---|---|---|
+| MoM vs IPC **general** de Lima | 0.54 | 5.5 pp | no sigue |
+| MoM vs subíndice **Alimentos y Bebidas** (BCRP `PN01313PM`) | 0.44 | 5.4 pp | no sigue |
+| **Interanual** vs Alimentos | 0.53 | 3.9 pp | no sigue |
+| **Niveles/tendencia** vs Alimentos | −0.20 | — | van en sentido opuesto |
+
+**Causa (no es un defecto de método):** nuestro índice son 6 alimentos frescos
+(papa, pollo, huevo, cebolla, tomate, limón), de los **más volátiles** de cualquier
+canasta — se mueve ±10% mes a mes. Ningún índice oficial mide ese mismo canasto: el
+general y hasta el subíndice de Alimentos promedian cientos de productos, la mayoría
+estables (arroz, aceite, pan, comidas fuera del hogar) → se mueven ±1%. Comparar 6
+frescos volátiles contra un agregado suave **no puede correlacionar**, sea cual sea
+el índice o la lente. Además, en 2024–2025 nuestros frescos **bajaron** (~8% anual)
+mientras el agregado de alimentos **subió** (~2%): tendencias opuestas, probablemente
+reales (buenas cosechas de frescos vs. encarecimiento del resto).
+
+Verificado que **no es un artefacto de datos**: la cobertura es completa (los 6
+productos todos los meses) y los precios promedio son plausibles. Los saltos son
+volatilidad genuina de los frescos.
+
+**Opción A descartada:** validar producto-por-producto contra precios oficiales
+(nuestra papa vs. la papa del INEI) exigiría una serie oficial por producto para
+Lima, mensual y machine-readable. El BCRP solo publica agregados; el INEI publica
+precios por producto solo en PDFs mensuales (scraping frágil). No hay base confiable
+→ se adoptó la opción B (validación por solidez interna).
 
 ### Mapeo de productos (precio → slug MVP)
 
@@ -70,23 +119,16 @@ Las variedades de un mismo producto (p.ej. las papas) se **promedian por igual**
 
 ## Caveats (leer antes de interpretar)
 
-1. **Alcance: 6 alimentos vs IPC general.** El `stg_ipc_inei` disponible es el
-   IPC **general** de Lima (una sola serie, base Dic2021), no el subíndice de
-   *Alimentos y Bebidas*. Nuestro índice es de 6 alimentos frescos, más volátiles
-   que la canasta total → esperar tracking más flojo. **Mejora futura:** ingestar
-   el subíndice de alimentos del INEI para una comparación como-con-como.
-2. **Geografía.** SISAP se scrapea solo para Lima (dep 15), que **coincide** con
-   el ámbito del IPC (Lima Metropolitana). Para otros departamentos no hay serie
-   de IPC ingestada, así que la validación por-depto queda pendiente de esos
-   datos.
+1. **6 frescos ≠ cualquier IPC agregado.** Ya probado con el IPC general y con el
+   subíndice de Alimentos: no correlaciona por naturaleza (ver §"Por qué…"). Por eso
+   el contraste con el IPC es descriptivo, no criterio.
+2. **Geografía.** SISAP se scrapea solo para Lima (dep 15). Para otros departamentos
+   no hay precios propios, así que el contraste con el IPC solo aplica a Lima.
 3. **Niveles no comparables.** Nuestra base es el primer mes con datos; la del
-   IPC es Dic2021. Por eso se comparan **variaciones**, nunca niveles.
-4. **Solape temporal.** La comparación necesita al menos un mes en el que
-   coexistan nuestros precios y el IPC ya publicado (el IPC sale con ~1 mes de
-   rezago).
-5. **Mes parcial.** Si el último mes de precios está incompleto (p.ej. corre a
-   mitad de mes), su promedio y su variación son parciales — tomar la variación
-   del mes en curso como preliminar.
+   IPC es Dic2021. El contraste descriptivo usa **variaciones**, nunca niveles.
+4. **Mes parcial.** Si el último mes de precios está incompleto (corre a mitad de
+   mes), su promedio y su variación son parciales — tomar el mes en curso como
+   preliminar.
 
 ---
 
@@ -105,16 +147,19 @@ Requiere `SUPABASE_DB_URL` (en el entorno o en `.env`).
 
 ---
 
-## Estado al 2026-07
+## Estado al 2026-07-22 (verificado en prod, lectura)
 
-- ✅ **Prerequisitos de datos listos**: `dbt build` materializó
-  `gold.fct_precio_diario`; `gold.canasta_consumo_dept` cargada desde la
-  ENAHO 2023 (150 filas, 25 deptos × 6 productos, Σpesos=1 por depto).
-- ⏳ **PENDIENTE por solape temporal**: los precios van de **jun–jul 2026** y el
-  IPC publicado llega a **may 2026** → **cero meses en común**. Con solo 2 meses
-  de precios (y julio parcial) hay a lo sumo 1 punto de variación propia.
-- 📌 **Señal descriptiva** (no es la validación): índice propio de Lima
-  jun→jul 2026 ≈ **+5.7%** (julio parcial, sobreestima el mes completo).
-- 🔜 **Rehacer** cuando el INEI publique un mes que solape con nuestros precios
-  (~ago–sep 2026) y tengamos ≥3 meses en común; ahí el script produce el
-  veredicto automáticamente.
+- ✅ **Datos listos**: `gold.fct_precio_diario` poblado (precios Lima ene-2024 →
+  jul-2026); `gold.canasta_consumo_dept` con ENAHO 2023 (150 filas, 25 deptos × 6
+  productos, Σpesos=1 por depto).
+- ✅ **VEREDICTO: `CANASTA SÓLIDA`** (Lima, `sisap_minorista`). Los 3 chequeos del
+  gate pasan: pesos suman 1.0; cobertura 100% de meses con los 6 productos; todos
+  los precios en rango plausible. Único aviso: hueco 2026-01→05 sin datos SISAP (no
+  bloquea).
+- 📌 **Contexto descriptivo** (NO es la validación): el contraste MoM contra el IPC
+  general da correlación 0.54 / TE 5.5 pp — divergencia **esperable** (frescos
+  volátiles vs. agregado suave), no un defecto. Detalle y evidencia multi-benchmark
+  en §"Por qué la correlación con el IPC no valida".
+- 🔎 **Nota de dato antiguo**: una versión previa de este doc decía "0 meses en
+  común / esperar a ago-sep 2026". Era incorrecto: el backfill histórico de SISAP da
+  24 meses de solape. Corregido.

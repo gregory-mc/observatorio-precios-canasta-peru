@@ -10,10 +10,15 @@ Los 25 códigos y nombres son **canónicos del INEI** (24 departamentos + Provin
 Constitucional del Callao). Ojo con los que confunden: **Lima = `15`**,
 **Callao = `07`**.
 
-⚠️ `region_sisap` es **best-effort**: por defecto = el nombre del departamento, que
-es el caso común. Los valores reales del SISAP deben reconciliarse contra
-`SELECT DISTINCT region FROM bronze.sisap_precios` antes del join definitivo de #19
-(p.ej. acentos, "Lima Metropolitana" vs "Lima", mayúsculas). Ver REGION_SISAP_OVERRIDE.
+Reconciliación de `region_sisap` — RESUELTA (verificado 2026-07-22, lectura en prod):
+`SELECT DISTINCT region FROM bronze.sisap_precios` devuelve un único valor, `'Lima'`,
+que calza exacto con `DEPARTAMENTOS['15']` → no hay acentos/alias que reconciliar.
+Además, `gold.fct_precio_diario` **ya está llaveado por `cod_departamento`** (el mart
+`fct_precio_diario.sql` mapea SISAP→`'15'` y Marketplace→NULL directamente), así que el
+cruce precio×canasta se hace por código, no por nombre de región. Es decir, `region_sisap`
+no está hoy en ningún camino de join; `DEPARTAMENTOS` (código→nombre) sí sirve, p.ej. para
+mostrar nombres en el dashboard (M5). Si en el futuro SISAP scrapea más regiones, revisar
+`REGION_SISAP_OVERRIDE` contra los nuevos valores.
 """
 
 from __future__ import annotations
@@ -50,8 +55,8 @@ DEPARTAMENTOS: dict[str, str] = {
 }
 
 # Excepciones donde el nombre de la región en SISAP NO coincide con el del
-# departamento. Rellenar a medida que se reconcilie con los valores reales de
-# bronze.sisap_precios.region (de momento vacío; placeholder explícito).
+# departamento. Verificado 2026-07-22 contra prod: SISAP solo emite 'Lima' (=cod '15'),
+# que ya calza sin override → vacío a propósito. Rellenar solo si SISAP suma regiones nuevas.
 REGION_SISAP_OVERRIDE: dict[str, str] = {}
 
 # Códigos válidos (para el dominio de validación de la canasta).
