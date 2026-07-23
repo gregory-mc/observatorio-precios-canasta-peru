@@ -21,7 +21,8 @@ from datetime import date, datetime, timedelta, timezone
 import pandas as pd
 
 from . import config
-from .backtesting import ResultadoBacktest, comparar_serie
+from .backtesting import NOMBRES_MODELOS, ResultadoBacktest, comparar_serie
+from .cobertura import evaluar_cobertura, reportar
 from .datos import Serie, cargar_series
 from .persistencia import escribir_backtest_metricas
 
@@ -51,6 +52,26 @@ def evaluar_todas(series: list[Serie], horizonte: int) -> pd.DataFrame:
     df = pd.DataFrame(r.__dict__ for r in resultados)
     df["horizonte"] = horizonte
     return df
+
+
+CLAVE_SERIE = ["fuente", "cod_departamento", "producto"]
+
+
+def _series_evaluables(df: pd.DataFrame) -> int:
+    """Series distintas que llegaron a evaluarse (las que tenían cortes válidos)."""
+    return len(df[CLAVE_SERIE].drop_duplicates())
+
+
+def _esperado(df: pd.DataFrame) -> dict[str, int]:
+    """Una fila por serie evaluable en **cada** modelo comparado."""
+    n = _series_evaluables(df)
+    return {modelo: n for modelo in NOMBRES_MODELOS}
+
+
+def _obtenido(df: pd.DataFrame) -> dict[str, int]:
+    """Series distintas que cada modelo logró evaluar de verdad."""
+    por_modelo = df.groupby("modelo")[CLAVE_SERIE].apply(lambda g: len(g.drop_duplicates()))
+    return {str(modelo): int(n) for modelo, n in por_modelo.items()}
 
 
 def _loguear_veredicto(df: pd.DataFrame) -> None:
@@ -92,6 +113,13 @@ def ejecutar(args: argparse.Namespace) -> int:
         return 1
 
     _loguear_veredicto(metricas)
+
+    # Todos los modelos se evalúan sobre las mismas series evaluables, así que
+    # esperamos una fila por (serie evaluable × modelo). Un modelo con 0 series
+    # es un modelo que se cayó entero, no un resultado.
+    if reportar(evaluar_cobertura(_esperado(metricas), _obtenido(metricas)), log):
+        return 1
+
     n = escribir_backtest_metricas(metricas, fecha_corrida, db_url=args.db_url)
     log.info("💾 %d filas escritas en ml.backtest_metricas (corrida %s)", n, fecha_corrida)
     return 0

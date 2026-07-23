@@ -21,6 +21,7 @@ from datetime import date, datetime, timedelta, timezone
 import pandas as pd
 
 from . import config
+from .cobertura import evaluar_cobertura, reportar
 from .datos import Serie, cargar_series
 from .persistencia import escribir_predicciones
 from .prophet_modelo import pronosticar_serie
@@ -39,8 +40,10 @@ def entrenar_todas(series: list[Serie], horizonte: int = config.HORIZONTE_DIAS) 
 
     Una serie que falle al pronosticar (p.ej. Prophet no converge) se registra y
     se omite, sin abortar el batch — igual criterio de resiliencia que los
-    scrapers. El DataFrame resultante trae, además de las columnas de pronóstico,
-    ``fuente``, ``cod_departamento`` y ``producto``.
+    scrapers. El **techo** de esa resiliencia lo pone ``ejecutar`` vía
+    ``cobertura``: si se cae un modelo entero, la corrida falla. El DataFrame
+    resultante trae, además de las columnas de pronóstico, ``fuente``,
+    ``cod_departamento`` y ``producto``.
     """
     marcos: list[pd.DataFrame] = []
     for serie in series:
@@ -59,6 +62,28 @@ def entrenar_todas(series: list[Serie], horizonte: int = config.HORIZONTE_DIAS) 
     if not marcos:
         return pd.DataFrame()
     return pd.concat(marcos, ignore_index=True)
+
+
+CLAVE_SERIE = ["fuente", "cod_departamento", "producto"]
+
+
+def _esperado(series: list[Serie]) -> dict[str, int]:
+    """Series que *deberían* salir por cada modelo, según el umbral de historia."""
+    conteo: dict[str, int] = {}
+    for serie in series:
+        modelo = "prophet" if serie.es_modelable() else "media_movil"
+        conteo[modelo] = conteo.get(modelo, 0) + 1
+    return conteo
+
+
+def _obtenido(predicciones: pd.DataFrame) -> dict[str, int]:
+    """Series distintas que realmente se pronosticaron con cada modelo."""
+    if predicciones.empty:
+        return {}
+    por_modelo = predicciones.groupby("modelo")[CLAVE_SERIE].apply(
+        lambda g: len(g.drop_duplicates())
+    )
+    return {str(modelo): int(n) for modelo, n in por_modelo.items()}
 
 
 def ejecutar(args: argparse.Namespace) -> int:
@@ -81,6 +106,10 @@ def ejecutar(args: argparse.Namespace) -> int:
     predicciones = entrenar_todas(series, horizonte=args.horizonte)
     if predicciones.empty:
         log.error("🚨 0 pronósticos generados.")
+        return 1
+
+    # Techo a la resiliencia: si un modelo entero se cayó, la corrida no vale.
+    if reportar(evaluar_cobertura(_esperado(series), _obtenido(predicciones)), log):
         return 1
 
     n = escribir_predicciones(predicciones, fecha_corrida, db_url=args.db_url)

@@ -50,3 +50,77 @@ def test_loguear_veredicto_no_falla_sin_prophet(monkeypatch):
         ]
     )
     run_backtesting._loguear_veredicto(df)  # no exception
+
+
+# --- Techo a la resiliencia: comparar_serie descarta el modelo que se cae, así
+# que un Prophet roto dejaba métricas solo de baselines y exit 0.
+
+
+def _metricas(modelos: list[str], productos: list[str]) -> pd.DataFrame:
+    filas = [
+        {
+            "fuente": "sisap_minorista",
+            "cod_departamento": "15",
+            "producto": p,
+            "modelo": m,
+            "mape": 5.0,
+            "rmse": 0.5,
+        }
+        for p in productos
+        for m in modelos
+    ]
+    return pd.DataFrame(filas)
+
+
+def test_esperado_es_una_fila_por_serie_evaluable_y_modelo():
+    df = _metricas(["prophet", "media_movil", "naive"], ["PAPA", "CEBOLLA"])
+    assert run_backtesting._esperado(df) == {"prophet": 2, "media_movil": 2, "naive": 2}
+
+
+def test_obtenido_refleja_el_modelo_ausente():
+    df = _metricas(["media_movil", "naive"], ["PAPA", "CEBOLLA"])
+    assert run_backtesting._obtenido(df) == {"media_movil": 2, "naive": 2}
+    assert run_backtesting._esperado(df)["prophet"] == 2  # se esperaba y no salió
+
+
+class _Args:
+    fecha_corrida = None
+    fuente = None
+    horizonte = 14
+    db_url = None
+
+
+def test_ejecutar_falla_si_prophet_no_produjo_ninguna_serie(monkeypatch):
+    monkeypatch.setattr(run_backtesting, "cargar_series", lambda **kw: [_serie("PAPA")])
+    monkeypatch.setattr(
+        run_backtesting,
+        "evaluar_todas",
+        lambda series, horizonte: _metricas(["media_movil", "naive"], ["PAPA"]),
+    )
+    escrituras = []
+    monkeypatch.setattr(
+        run_backtesting,
+        "escribir_backtest_metricas",
+        lambda df, fecha, db_url=None: escrituras.append(len(df)) or len(df),
+    )
+
+    assert run_backtesting.ejecutar(_Args()) == 1
+    assert escrituras == []
+
+
+def test_ejecutar_ok_con_los_tres_modelos(monkeypatch):
+    monkeypatch.setattr(run_backtesting, "cargar_series", lambda **kw: [_serie("PAPA")])
+    monkeypatch.setattr(
+        run_backtesting,
+        "evaluar_todas",
+        lambda series, horizonte: _metricas(["prophet", "media_movil", "naive"], ["PAPA"]),
+    )
+    escrituras = []
+    monkeypatch.setattr(
+        run_backtesting,
+        "escribir_backtest_metricas",
+        lambda df, fecha, db_url=None: escrituras.append(len(df)) or len(df),
+    )
+
+    assert run_backtesting.ejecutar(_Args()) == 0
+    assert escrituras == [3]

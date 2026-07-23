@@ -65,3 +65,88 @@ def test_sin_series_devuelve_dataframe_vacio(monkeypatch):
     )
     df = run_entrenamiento.entrenar_todas([], horizonte=3)
     assert df.empty
+
+
+# --- Techo a la resiliencia: un modelo caído entero debe fallar la corrida ------
+# Reproduce el fallo real del 2026-07-22 (todas las series de Prophet caídas por
+# un problema de entorno, batch terminado en éxito con solo baseline).
+
+
+def _serie_larga(producto: str) -> Serie:
+    """Serie que supera el umbral de historia → se espera Prophet."""
+    obs = pd.DataFrame(
+        {"ds": pd.date_range("2024-01-01", periods=120, freq="D"), "y": [2.0] * 120}
+    )
+    return Serie("sisap_minorista", "15", producto, obs)
+
+
+def test_esperado_separa_prophet_de_baseline():
+    esperado = run_entrenamiento._esperado([_serie_larga("PAPA"), _serie("CEBOLLA")])
+    assert esperado == {"prophet": 1, "media_movil": 1}
+
+
+def test_obtenido_cuenta_series_distintas_no_filas():
+    df = pd.concat(
+        [
+            _pred_stub(3).assign(fuente="sisap_minorista", cod_departamento="15", producto="PAPA"),
+            _pred_stub(3).assign(
+                fuente="sisap_minorista", cod_departamento="15", producto="CEBOLLA"
+            ),
+        ],
+        ignore_index=True,
+    )
+    # 6 filas, 2 series
+    assert run_entrenamiento._obtenido(df) == {"media_movil": 2}
+
+
+class _Args:
+    fecha_corrida = None
+    fuente = None
+    horizonte = 3
+    db_url = None
+
+
+def test_ejecutar_falla_si_se_cae_el_modelo_entero(monkeypatch):
+    """Prophet se cae en todas sus series: la corrida NO debe escribir ni salir 0."""
+    series = [_serie_larga("PAPA"), _serie("CEBOLLA")]
+    monkeypatch.setattr(run_entrenamiento, "cargar_series", lambda **kw: series)
+
+    def _pronosticar(serie, horizonte):
+        if serie.es_modelable():
+            raise RuntimeError("stan_backend no cargó")
+        return _pred_stub(horizonte)
+
+    monkeypatch.setattr(run_entrenamiento, "pronosticar_serie", _pronosticar)
+
+    escrituras = []
+    monkeypatch.setattr(
+        run_entrenamiento,
+        "escribir_predicciones",
+        lambda df, fecha, db_url=None: escrituras.append(len(df)) or len(df),
+    )
+
+    codigo = run_entrenamiento.ejecutar(_Args())
+
+    assert codigo == 1
+    assert escrituras == []  # no se escribe una corrida a medias
+
+
+def test_ejecutar_ok_cuando_todos_los_modelos_responden(monkeypatch):
+    series = [_serie_larga("PAPA"), _serie("CEBOLLA")]
+    monkeypatch.setattr(run_entrenamiento, "cargar_series", lambda **kw: series)
+    monkeypatch.setattr(
+        run_entrenamiento,
+        "pronosticar_serie",
+        lambda s, horizonte: _pred_stub(horizonte).assign(
+            modelo="prophet" if s.es_modelable() else "media_movil"
+        ),
+    )
+    escrituras = []
+    monkeypatch.setattr(
+        run_entrenamiento,
+        "escribir_predicciones",
+        lambda df, fecha, db_url=None: escrituras.append(len(df)) or len(df),
+    )
+
+    assert run_entrenamiento.ejecutar(_Args()) == 0
+    assert escrituras == [6]  # 2 series × 3 días
