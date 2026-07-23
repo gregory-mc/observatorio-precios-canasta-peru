@@ -51,10 +51,13 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: 🛠️ Instalar dependencias (ingesta + carga)
+      # Pip tradicional (no lee pyproject → no choca con requires-python>=3.11,
+      # igual que la ingesta diaria SISAP que corre en este mismo runner con 3.10).
+      # El código se ejecuta vía PYTHONPATH, no necesita install editable.
+      - name: 🛠️ Instalar dependencias
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[ingesta,carga]"
+          pip install requests beautifulsoup4 "psycopg[binary]" python-dotenv
 
       - name: 🛰️ Ejecutar backfill histórico
         shell: powershell
