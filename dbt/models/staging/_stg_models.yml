@@ -36,8 +36,17 @@ models:
         description: "Nombre del producto según SISAP. Parte del grano."
         tests: [not_null]
       - name: precio_prom
-        description: "Precio promedio del día (> 0 por construcción)."
+        description: >
+          Precio promedio del día en la UNIDAD ORIGINAL de la fuente (> 0 por
+          construcción). En mayorista puede ser por cajón/bolsa/millar, no por kg;
+          el mart fct_precio_diario lo normaliza a S/kg dividiendo por equiv_kg_lt.
         tests: [not_null]
+      - name: unidad_medida
+        description: "Unidad tal cual la fuente (p.ej. 'Kilogramo', 'Cajon chico'). Puede ser null."
+      - name: equiv_kg_lt
+        description: >
+          Factor de conversión de la unidad de la fuente a kg/litro (p.ej. 27 para un
+          'Cajon chico' de tomate). Null solo en filas sin precio (filtradas aquí).
 
   - name: stg_osinergmin_precios
     description: >

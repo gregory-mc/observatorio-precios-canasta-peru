@@ -1,6 +1,8 @@
 -- Silver: precios SISAP (MIDAGRI) de Lima, uno por producto × tipo de mercado y
--- fecha. Dedup por grano y filtrado a filas con precio reportado. El cruce
--- minorista/mayorista y la normalización de unidades se hacen en marts (#24).
+-- fecha. Dedup por grano y filtrado a filas con precio reportado. Se mantiene fiel
+-- a la fuente: expone `precio_prom` en la unidad original y el factor `equiv_kg_lt`.
+-- El cruce minorista/mayorista y la normalización de unidad a S/kg (dividir por
+-- equiv_kg_lt) se hacen en el mart fct_precio_diario (#24).
 
 with source as (
     select * from {{ source('bronze', 'sisap_precios') }}
