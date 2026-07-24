@@ -10,11 +10,11 @@ name: Pipeline ML (predicciones + anomalías)
 # cmdstanpy (docs/ml.md §1). En ubuntu-latest no hace falta.
 
 on:
-  # ⚠️ Habilitar el cron recién después de una corrida manual en verde
-  # (descomentar estas 3 líneas). Lunes 23:00 UTC = 18:00 Lima, una hora después
-  # del dbt diario, así entrena contra el gold del día.
-  # schedule:
-  #   - cron: "0 23 * * 1"
+  # Lunes 23:00 UTC = 18:00 Lima, una hora después del dbt diario, así entrena
+  # contra el gold del día. Habilitado el 2026-07-24 tras la primera corrida
+  # manual en verde (2,436 predicciones · 477 anomalías · 453 métricas, PASS=22).
+  schedule:
+    - cron: "0 23 * * 1"
   workflow_dispatch:
     inputs:
       fecha_corrida:
