@@ -21,7 +21,9 @@ que es lo que sí delataría una canasta rota:
 
   1. Pesos que suman 1 sobre los productos del MVP con precio.
   2. Cobertura de productos estable mes a mes (sin saltos por entradas/salidas).
-  3. Precios en rango de sanidad (atrapa errores de unidad/parseo).
+  3. Precios dentro del rango esperado DE CADA PRODUCTO, calibrado sobre referencias
+     de precio minorista conocidas (issue #102, propuesta 1). Atrapa errores de
+     parseo/unidad y saltos absurdos (una papa a S/ 45/kg), no solo lo grosero.
   4. Serie mensual sin huecos (aviso).
 
 El índice se arma con un Laspeyres de base fija:
@@ -65,10 +67,34 @@ MAPEO_PRECIO_MVP: dict[str, tuple[str, ...]] = {
 MIN_OVERLAP = 3  # ≥3 meses en común para calcular correlación/tracking error.
 
 # --- Criterios de SOLIDEZ INTERNA (el veredicto real, opción B) --------------- #
-# Rango de sanidad para precios de alimentos frescos en S/ por kg. NO es un límite
-# de negocio: es amplísimo a propósito. Solo atrapa errores de unidad/parseo (un
-# fresco a S/ 500/kg es casi seguro basura); la volatilidad normal cae holgada.
-RANGO_PLAUSIBLE_SOLKG = (0.1, 100.0)
+# Rangos de sanidad de precio POR PRODUCTO, en S/ por kg de venta minorista
+# (issue #102, propuesta 1: "validar niveles contra referencias conocidas"). Antes
+# había un único rango 0.1–100 para todo, que solo atrapaba errores de unidad
+# groseros: una papa a S/ 45/kg (≈10× lo normal) pasaba inadvertida. Estos límites
+# se calibraron sobre la distribución real de SISAP minorista 2024–2026 (percentiles
+# 1–99 por producto) y se ensancharon con margen para picos de escasez genuinos (el
+# limón llega a S/ 18–20/kg en desabastecimientos). Atrapan errores de parseo/unidad
+# y saltos absurdos sin castigar la volatilidad normal de los frescos.
+#
+# Son referencias de precio MINORISTA (el ámbito canónico de la validación: es el que
+# cruza con los pesos ENAHO y con el IPC). SISAP mayorista cotiza limón y tomate por
+# millar/jaba, no por kg, así que esos dos caerían fuera de rango en mayorista — es
+# un problema de modelado de unidad de la fuente, no de la canasta (ver docs).
+RANGOS_PLAUSIBLES_SOLKG: dict[str, tuple[float, float]] = {
+    "papa": (0.3, 15.0),
+    "cebolla": (0.4, 12.0),
+    "huevo": (2.5, 16.0),
+    "pollo": (4.0, 22.0),
+    "tomate": (1.0, 18.0),
+    "limon": (1.0, 30.0),
+}
+# Fallback para un slug sin rango propio: amplio, solo atrapa errores de unidad.
+RANGO_PLAUSIBLE_DEFAULT = (0.1, 100.0)
+
+
+def rango_plausible(slug: str) -> tuple[float, float]:
+    """Rango de precio esperado (S/kg minorista) para un producto MVP."""
+    return RANGOS_PLAUSIBLES_SOLKG.get(slug, RANGO_PLAUSIBLE_DEFAULT)
 # Fracción mínima de meses en que deben estar TODOS los productos con peso, para
 # que la composición del índice sea estable (sin saltos por entradas/salidas).
 COBERTURA_MINIMA = 0.9
@@ -186,7 +212,8 @@ def evaluar_solidez(
       * ``pesos_suman_1``   — los pesos del MVP suman 1.0 (± 1e-6).
       * ``cobertura``       — fracción de meses con TODOS los productos con peso
                               presentes ≥ COBERTURA_MINIMA (composición estable).
-      * ``precios_plausibles`` — todo precio mensual dentro de RANGO_PLAUSIBLE_SOLKG.
+      * ``precios_plausibles`` — todo precio mensual dentro del rango esperado de SU
+                              producto (``RANGOS_PLAUSIBLES_SOLKG``, #102 propuesta 1).
       * ``serie_continua``  — sin huecos en el tramo mensual cubierto (solo aviso).
 
     Los tres primeros son el gate (``veredicto`` = "CANASTA SÓLIDA" / "REVISAR");
@@ -207,12 +234,12 @@ def evaluar_solidez(
         cobertura = 0.0
     ok_cobertura = cobertura >= COBERTURA_MINIMA
 
-    lo, hi = RANGO_PLAUSIBLE_SOLKG
+    # Cada precio se juzga contra el rango de SU producto (#102 propuesta 1).
     fuera_rango = [
         (m, p, pr)
         for m in meses
         for p, pr in precios_mensuales[m].items()
-        if pr is not None and not (lo <= pr <= hi)
+        if pr is not None and not (rango_plausible(p)[0] <= pr <= rango_plausible(p)[1])
     ]
     ok_precios = not fuera_rango
 
@@ -238,7 +265,7 @@ def evaluar_solidez(
             "precios_plausibles": {
                 "ok": ok_precios,
                 "fuera_rango": fuera_rango[:10],
-                "rango": RANGO_PLAUSIBLE_SOLKG,
+                "rangos": RANGOS_PLAUSIBLES_SOLKG,
             },
             "serie_continua": {"ok": not huecos, "huecos": huecos},
         },
@@ -348,12 +375,13 @@ def _reporte(
         f"({c['cobertura']['fraccion']:.0%} de meses completos; mín {c['cobertura']['minima']:.0%})"
     )
     m = "✓" if c["precios_plausibles"]["ok"] else "✗"
-    lo, hi = c["precios_plausibles"]["rango"]
-    detalle = "" if c["precios_plausibles"]["ok"] else f" fuera: {c['precios_plausibles']['fuera_rango']}"
-    print(f"   [{m}] precios plausibles         (rango S/{lo}-{hi}/kg){detalle}")
+    fuera = c["precios_plausibles"]["fuera_rango"]
+    detalle = "" if c["precios_plausibles"]["ok"] else f" fuera: {fuera}"
+    print(f"   [{m}] precios plausibles         (rango por producto, S/kg minorista){detalle}")
     m = "✓" if c["serie_continua"]["ok"] else "!"
     huecos = c["serie_continua"]["huecos"]
-    print(f"   [{m}] serie continua             ({'sin huecos' if not huecos else 'huecos: ' + ', '.join(huecos)})  [aviso]")
+    cont = "sin huecos" if not huecos else "huecos: " + ", ".join(huecos)
+    print(f"   [{m}] serie continua             ({cont})  [aviso]")
     print(f"\n   VEREDICTO: {solidez['veredicto']}")
 
     # --- Contexto descriptivo: contraste con el IPC (NO es criterio) -------- #

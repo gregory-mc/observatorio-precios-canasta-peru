@@ -7,9 +7,12 @@ contraste con el IPC sea meramente descriptivo (no gatilla el veredicto).
 """
 
 from observatorio.validacion.canasta_vs_ipc import (
+    RANGO_PLAUSIBLE_DEFAULT,
+    RANGOS_PLAUSIBLES_SOLKG,
     comparar,
     construir_indice,
     evaluar_solidez,
+    rango_plausible,
 )
 
 # Canasta MVP mínima: 3 productos con pesos que suman 1, 3 meses completos.
@@ -60,6 +63,36 @@ class TestEvaluarSolidez:
         assert not sol["checks"]["precios_plausibles"]["ok"]
         assert sol["checks"]["precios_plausibles"]["fuera_rango"]
         assert sol["veredicto"] == "REVISAR"
+
+    def test_precio_moderadamente_absurdo_falla_por_rango_por_producto(self):
+        # papa a S/ 45/kg (≈10× lo normal): dentro del viejo blanket 0.1–100 pero
+        # fuera del rango propio de la papa (#102 propuesta 1). Debe fallar.
+        assert rango_plausible("papa")[1] < 45.0 < RANGO_PLAUSIBLE_DEFAULT[1]
+        precios = {m: dict(v) for m, v in PRECIOS_OK.items()}
+        precios["2024-02"]["papa"] = 45.0
+        sol = evaluar_solidez(precios, PESOS_OK, construir_indice(precios, PESOS_OK))
+        assert not sol["checks"]["precios_plausibles"]["ok"]
+        assert sol["veredicto"] == "REVISAR"
+
+    def test_pico_de_escasez_del_limon_sigue_plausible(self):
+        # el limón trepa a S/ 18/kg en desabastecimientos: volatilidad real, no error.
+        precios = {
+            "2024-01": {"papa": 3.5, "pollo": 10.0, "limon": 4.0},
+            "2024-02": {"papa": 3.8, "pollo": 9.5, "limon": 18.0},
+            "2024-03": {"papa": 3.2, "pollo": 11.0, "limon": 6.0},
+        }
+        pesos = {"papa": 0.5, "pollo": 0.3, "limon": 0.2}
+        sol = evaluar_solidez(precios, pesos, construir_indice(precios, pesos))
+        assert sol["checks"]["precios_plausibles"]["ok"]
+        assert sol["veredicto"] == "CANASTA SÓLIDA"
+
+    def test_cada_producto_mvp_tiene_rango_propio(self):
+        # los 6 slugs del MVP deben tener un rango calibrado (no caer al fallback).
+        assert set(RANGOS_PLAUSIBLES_SOLKG) == {
+            "papa", "cebolla", "huevo", "pollo", "tomate", "limon"
+        }
+        for lo, hi in RANGOS_PLAUSIBLES_SOLKG.values():
+            assert 0 < lo < hi
 
     def test_hueco_es_aviso_no_falla(self):
         # salta de enero a marzo (falta febrero): continuidad falla pero sigue SÓLIDA.

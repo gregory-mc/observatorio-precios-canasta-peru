@@ -1,10 +1,16 @@
-# Validación de la canasta (issue #20)
+# Validación de la canasta (issues #20 y #102)
 
 Cómo validamos la **metodología de la canasta** (pesos derivados de la ENAHO,
 ver [`canasta_consumo_dept.md`](canasta_consumo_dept.md)). Implementado en
 [`observatorio/validacion/canasta_vs_ipc.py`](../observatorio/validacion/canasta_vs_ipc.py).
 
 > El script es un **reporte de solo lectura**: nunca escribe a la base.
+
+> **#20 → #102.** El #20 preguntaba "¿valida la canasta comparar su índice contra el
+> IPC?" y la respuesta empírica fue **no** (ver §"Por qué la correlación con el IPC no
+> valida"). El #102 reformuló el criterio: el veredicto pasó a ser la **solidez
+> interna** del índice (no la correlación con el IPC), y el chequeo de precios se
+> endureció a **rangos por producto** (antes un único rango 0.1–100/kg para todo).
 
 ---
 
@@ -21,11 +27,37 @@ que sí delataría una canasta rota—:
 1. **Pesos suman 1.0** (± 1e-6) sobre los productos del MVP con precio.
 2. **Cobertura de productos estable**: ≥ 90% de los meses con todos los productos
    presentes (evita saltos artificiales por entradas/salidas de productos).
-3. **Precios plausibles**: todo precio mensual en S/ 0.1–100/kg (atrapa errores de
-   unidad/parseo; la volatilidad normal de los frescos cae holgada dentro).
+3. **Precios plausibles** (#102, propuesta 1): cada precio mensual dentro del rango
+   esperado **de su producto**, no de un rango único para todos. Antes el límite era
+   0.1–100/kg para todo, que solo atrapaba errores de unidad groseros (una papa a
+   S/ 45/kg —≈10× lo normal— pasaba). Los rangos por producto (abajo) se calibraron
+   sobre la distribución real de SISAP minorista 2024–2026 (percentiles 1–99) con
+   margen para picos de escasez genuinos.
 4. **Serie continua**: sin huecos mensuales (solo **aviso**, no bloquea).
 
 Los tres primeros son el gate → veredicto `CANASTA SÓLIDA` / `REVISAR`.
+
+### Rangos de precio plausible por producto (S/kg, minorista)
+
+Referencias conocidas de precio minorista en Lima. Se listan en
+`canasta_vs_ipc.py::RANGOS_PLAUSIBLES_SOLKG`; un slug sin rango propio cae al
+fallback amplio (`RANGO_PLAUSIBLE_DEFAULT` = 0.1–100).
+
+| Producto | Rango S/kg | p01–p99 observado |
+|---|---|---|
+| papa | 0.3 – 15 | 1.86 – 6.21 |
+| cebolla | 0.4 – 12 | 2.71 – 4.44 |
+| huevo | 2.5 – 16 | 6.07 – 10.06 |
+| pollo | 4 – 22 | 8.50 – 12.19 |
+| tomate | 1.0 – 18 | 3.39 – 6.17 |
+| limon | 1.0 – 30 | 3.74 – 7.06 (pico de escasez hasta ~20) |
+
+> **Los rangos son de precio MINORISTA** (el ámbito canónico de la validación: es el
+> que cruza con los pesos ENAHO y el IPC). SISAP **mayorista** cotiza limón y tomate
+> por millar/jaba, no por kg (limón mediana S/55 vs S/4.36 minorista; tomate S/62 vs
+> S/4.48), así que en mayorista esos dos caen fuera de rango — es un problema de
+> **unidad de la fuente**, no de la canasta. Correr `--fuente sisap_mayorista` da
+> `REVISAR` a propósito, señalando ese dato. Pendiente de arreglo en la ingesta.
 
 ## Contexto descriptivo: contraste con el IPC (no valida)
 
@@ -92,11 +124,17 @@ Verificado que **no es un artefacto de datos**: la cobertura es completa (los 6
 productos todos los meses) y los precios promedio son plausibles. Los saltos son
 volatilidad genuina de los frescos.
 
-**Opción A descartada:** validar producto-por-producto contra precios oficiales
-(nuestra papa vs. la papa del INEI) exigiría una serie oficial por producto para
-Lima, mensual y machine-readable. El BCRP solo publica agregados; el INEI publica
-precios por producto solo en PDFs mensuales (scraping frágil). No hay base confiable
-→ se adoptó la opción B (validación por solidez interna).
+**Opción A descartada:** validar producto-por-producto contra una **serie oficial**
+(nuestra papa vs. la papa del INEI, mes a mes) exigiría una serie mensual y
+machine-readable por producto para Lima. El BCRP solo publica agregados; el INEI
+publica precios por producto solo en PDFs mensuales (scraping frágil). No hay base
+confiable → se adoptó la opción B (validación por solidez interna).
+
+> Ojo con no confundir la opción A con la **propuesta 1 del #102**, que sí se
+> implementó: la propuesta 1 no compara contra una serie oficial mes a mes, solo
+> exige que el precio caiga en un **rango plausible conocido** por producto — que se
+> fija con un puñado de cotas, no con una serie completa. Es la versión factible y
+> es lo que hoy endurece el chequeo de "precios plausibles".
 
 ### Mapeo de productos (precio → slug MVP)
 
@@ -154,8 +192,8 @@ Requiere `SUPABASE_DB_URL` (en el entorno o en `.env`).
   productos, Σpesos=1 por depto).
 - ✅ **VEREDICTO: `CANASTA SÓLIDA`** (Lima, `sisap_minorista`). Los 3 chequeos del
   gate pasan: pesos suman 1.0; cobertura 100% de meses con los 6 productos; todos
-  los precios en rango plausible. Único aviso: hueco 2026-01→05 sin datos SISAP (no
-  bloquea).
+  los precios dentro del rango **por producto** (#102). Único aviso: hueco 2026-01→05
+  sin datos SISAP (no bloquea). Reverificado el 2026-07-24 tras endurecer el chequeo.
 - 📌 **Contexto descriptivo** (NO es la validación): el contraste MoM contra el IPC
   general da correlación 0.54 / TE 5.5 pp — divergencia **esperable** (frescos
   volátiles vs. agregado suave), no un defecto. Detalle y evidencia multi-benchmark
