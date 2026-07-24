@@ -14,7 +14,15 @@ with sisap as (
         'sisap_' || tipo_mercado as fuente,
         '15'::char(2)            as cod_departamento,  -- SISAP se scrapea solo para Lima (dep. 15)
         producto,
-        precio_prom              as precio
+        -- Normalización de unidad a S/ por kg (o litro). SISAP mayorista cotiza
+        -- muchos productos por cajón/bolsa/millar, no por kg: el tomate viene en
+        -- "Cajón chico" de 27 kg (S/63/cajón), el limón en bolsa de 45 kg. Sin
+        -- dividir por equiv_kg_lt —el factor de conversión que la propia fuente
+        -- publica— el hecho mezclaba unidades: tomate mayorista a S/63 convivía con
+        -- el minorista a S/4.6/kg. Toda fila con precio trae equiv_kg_lt (verificado:
+        -- 0 nulos entre las priceadas); el coalesce es defensivo. MVP minorista tiene
+        -- equiv=1.0, así que su precio no cambia. Ver docs/validacion_canasta_vs_ipc.md.
+        precio_prom / coalesce(nullif(equiv_kg_lt, 0), 1.0) as precio
     from {{ ref('stg_sisap_precios') }}
 ),
 

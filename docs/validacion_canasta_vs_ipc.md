@@ -53,11 +53,20 @@ fallback amplio (`RANGO_PLAUSIBLE_DEFAULT` = 0.1–100).
 | limon | 1.0 – 30 | 3.74 – 7.06 (pico de escasez hasta ~20) |
 
 > **Los rangos son de precio MINORISTA** (el ámbito canónico de la validación: es el
-> que cruza con los pesos ENAHO y el IPC). SISAP **mayorista** cotiza limón y tomate
-> por millar/jaba, no por kg (limón mediana S/55 vs S/4.36 minorista; tomate S/62 vs
-> S/4.48), así que en mayorista esos dos caen fuera de rango — es un problema de
-> **unidad de la fuente**, no de la canasta. Correr `--fuente sisap_mayorista` da
-> `REVISAR` a propósito, señalando ese dato. Pendiente de arreglo en la ingesta.
+> que cruza con los pesos ENAHO y el IPC), pero desde que el mart normaliza la unidad
+> (ver nota siguiente) también sirven para mayorista: el mayoreo cae por debajo del
+> menudeo, como debe ser (limón mayorista mediana S/1.58 vs S/4.36 minorista; tomate
+> S/2.31 vs S/4.48).
+
+> **Normalización de unidad (resuelta 2026-07-24).** SISAP mayorista cotiza varios
+> productos por cajón/bolsa/millar, no por kg: el tomate venía en "Cajón chico" de
+> 27 kg (S/63/cajón), el limón en bolsa de 45 kg. El mart `fct_precio_diario` ahora
+> divide `precio_prom` por `equiv_kg_lt` —el factor de conversión que la propia
+> fuente publica en bronze— dejando todo en S/kg. Antes el hecho mezclaba unidades
+> (tomate mayorista a S/63 convivía con el minorista a S/4.6/kg) y `--fuente
+> sisap_mayorista` daba `REVISAR` por precios "fuera de rango"; ahora el chequeo de
+> precios pasa. (Mayorista sigue dando `REVISAR` por **cobertura**: no tiene los 6
+> productos MVP con peso todos los meses — es esperable, no es su ámbito.)
 
 ## Contexto descriptivo: contraste con el IPC (no valida)
 
