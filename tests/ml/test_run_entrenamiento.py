@@ -2,7 +2,7 @@
 
 import pandas as pd
 
-from observatorio.ml import run_entrenamiento
+from observatorio.ml import config, run_entrenamiento
 from observatorio.ml.datos import Serie
 from observatorio.ml.prophet_modelo import COLUMNAS_PRED
 
@@ -80,9 +80,20 @@ def _serie_larga(producto: str) -> Serie:
     return Serie("sisap_minorista", "15", producto, obs)
 
 
-def test_esperado_separa_prophet_de_baseline():
-    esperado = run_entrenamiento._esperado([_serie_larga("PAPA"), _serie("CEBOLLA")])
-    assert esperado == {"prophet": 1, "media_movil": 1}
+def test_esperado_sigue_la_config_no_solo_el_umbral(monkeypatch):
+    """Con Prophet apagado (el default), ninguna serie se espera por Prophet.
+
+    Regresión: `_esperado` calculaba el modelo por su cuenta, así que al apagar
+    Prophet esperaba series que ya nadie producía y la cobertura abortaba una
+    corrida sana.
+    """
+    series = [_serie_larga("PAPA"), _serie("CEBOLLA")]
+
+    monkeypatch.setattr(config, "USAR_PROPHET", False)
+    assert run_entrenamiento._esperado(series) == {"naive": 2}
+
+    monkeypatch.setattr(config, "USAR_PROPHET", True)
+    assert run_entrenamiento._esperado(series) == {"prophet": 1, "naive": 1}
 
 
 def test_obtenido_cuenta_series_distintas_no_filas():
@@ -109,6 +120,7 @@ class _Args:
 def test_ejecutar_falla_si_se_cae_el_modelo_entero(monkeypatch):
     """Prophet se cae en todas sus series: la corrida NO debe escribir ni salir 0."""
     series = [_serie_larga("PAPA"), _serie("CEBOLLA")]
+    monkeypatch.setattr(config, "USAR_PROPHET", True)  # el escenario exige a Prophet encendido
     monkeypatch.setattr(run_entrenamiento, "cargar_series", lambda **kw: series)
 
     def _pronosticar(serie, horizonte):
@@ -133,12 +145,13 @@ def test_ejecutar_falla_si_se_cae_el_modelo_entero(monkeypatch):
 
 def test_ejecutar_ok_cuando_todos_los_modelos_responden(monkeypatch):
     series = [_serie_larga("PAPA"), _serie("CEBOLLA")]
+    monkeypatch.setattr(config, "USAR_PROPHET", True)
     monkeypatch.setattr(run_entrenamiento, "cargar_series", lambda **kw: series)
     monkeypatch.setattr(
         run_entrenamiento,
         "pronosticar_serie",
         lambda s, horizonte: _pred_stub(horizonte).assign(
-            modelo="prophet" if s.es_modelable() else "media_movil"
+            modelo="prophet" if s.es_modelable() else config.MODELO_SERVIDO
         ),
     )
     escrituras = []

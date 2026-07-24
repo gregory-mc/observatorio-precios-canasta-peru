@@ -24,7 +24,7 @@ from . import config
 from .cobertura import evaluar_cobertura, reportar
 from .datos import Serie, cargar_series
 from .persistencia import escribir_predicciones
-from .prophet_modelo import pronosticar_serie
+from .prophet_modelo import modelo_de, pronosticar_serie
 
 log = logging.getLogger("ml.entrenamiento")
 LIMA = timezone(timedelta(hours=-5))
@@ -68,10 +68,15 @@ CLAVE_SERIE = ["fuente", "cod_departamento", "producto"]
 
 
 def _esperado(series: list[Serie]) -> dict[str, int]:
-    """Series que *deberían* salir por cada modelo, según el umbral de historia."""
+    """Series que *deberían* salir por cada modelo.
+
+    Delega en ``modelo_de`` para no duplicar la regla de decisión: si esta
+    función y ``pronosticar_serie`` discreparan, la cobertura echaría de menos
+    series de un modelo apagado y abortaría una corrida sana.
+    """
     conteo: dict[str, int] = {}
     for serie in series:
-        modelo = "prophet" if serie.es_modelable() else "media_movil"
+        modelo = modelo_de(serie)
         conteo[modelo] = conteo.get(modelo, 0) + 1
     return conteo
 

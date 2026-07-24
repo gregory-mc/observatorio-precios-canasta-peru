@@ -1,6 +1,6 @@
 # Estado del proyecto — snapshot
 
-> **Snapshot:** 2026-07-22 · Rama `main`
+> **Snapshot:** 2026-07-24 · Rama `main`
 > Documento **vivo** de registro del proyecto (para el equipo). Cada acción realizada
 > se anota en la **bitácora de cambios** al final (§8). Verificación de datos hecha en
 > **lectura** contra Supabase producción.
@@ -10,15 +10,16 @@
 ## 1. Resumen ejecutivo
 
 - **Ingesta (bronze):** ✅ en producción, automatizada y verde a diario.
-- **dbt (silver→gold de precios):** ✅ en producción con datos reales, pero **corre a
-  mano**: sin workflow, gold se congela (pasó 14 días entre el 8 y el 22 de julio).
+- **dbt (silver→gold de precios):** ✅ en producción con datos reales. Workflow
+  `dbt.yml` creado el 2026-07-24 (§8), **pendiente de merge**: hasta entonces gold
+  sigue congelándose (14 días entre el 8 y el 22 de julio; 2 días más al 24).
 - **ML (M4):** ✅ **corrido en producción el 2026-07-22** (predicciones, anomalías y
-  backtesting materializados). Corre a mano, como dbt.
+  backtesting materializados). Workflow `ml.yml` creado el 2026-07-24, mismo estado.
 - **M5 (dashboard/API) y M6 (deploy/bot):** 🔲 sin empezar.
 
-Frase clave: **ya no falta código, falta orquestación** — dbt y ML funcionan y
-tienen datos en prod, pero ninguno de los dos corre solo. Y el modelo estrella
-(Prophet) resultó peor que el baseline: ver el veredicto del backtesting en §8.
+Frase clave: **ya no falta código, falta orquestación** — y la orquestación ya está
+escrita, a la espera de mergearse. El modelo estrella (Prophet) resultó peor que el
+baseline y el veredicto se confirmó al remedirlo sobre 10× más series: ver §8.
 
 ---
 
@@ -96,16 +97,21 @@ Calidad de código: **170 tests en verde** (suite completa) + **49 nodos dbt en 
 
 ## 5. Gaps / pendientes estructurales
 
-1. **Falta workflow de transformación** (dbt y ML) — es la causa de que M4 no tenga
-   huella en prod **y** de que gold se congele (§2). Es el pendiente estructural nº1:
-   hoy la única forma de refrescar gold es que una persona corra `dbt build` a mano.
-2. **Correr M4 una vez** (entrenamiento → anomalías → backtesting → `dbt build`) para
-   poblar `ml.*` y los marts gold, y comprobar si Prophet le gana al baseline.
+1. **Mergear `dbt.yml` y `ml.yml`** — creados el 2026-07-24 pero sin efecto hasta que
+   estén en `main` (los workflows solo se disparan desde la rama por defecto).
+   Mientras tanto, gold se sigue atrasando un día por día.
+2. ~~Decidir qué modelo sirve el MVP.~~ ✅ **Resuelto 2026-07-24**: se sirve `naive`
+   con bandas empíricas (§8).
 3. **Deuda metodológica de canasta:** issues #20 / #102 / #21 (validación canasta y
    idempotencia de scrapers).
-4. M5 no puede mostrar predicciones/anomalías hasta que M4 corra al menos una vez.
+4. **Margen estrecho entre SISAP y `carga-supabase`** (§8): la carga corre a las 21:00
+   UTC y SISAP suele terminar ~20:30, pero ha tardado hasta 3 h 27 min. Riesgo
+   latente, todavía no materializado.
 
 **Resueltos:**
+- ~~Falta workflow de transformación (dbt y ML).~~ ✅ **Escrito 2026-07-24** (§8);
+  queda el merge.
+- ~~Correr M4 una vez para poblar `ml.*`.~~ ✅ **Hecho 2026-07-22** (§8).
 - ~~No había CI de tests (push/merge no verificaba nada).~~ ✅ **Resuelto 2026-07-15**:
   workflow `ci.yml` corre pytest en cada PR y push a main (PR #109, mergeado). Ver §8.
 
@@ -118,25 +124,33 @@ Calidad de código: **170 tests en verde** (suite completa) + **49 nodos dbt en 
 - ✅ **CI de tests activo** (`ci.yml`, PR #109 mergeado) — pytest en cada PR y push a main.
 - ✅ **Gold refrescado** (2026-07-22, `dbt build` a mano, 49 nodos en verde) — recuperados
   los 14 días de atraso. **No resuelve la causa**: sin workflow, se vuelve a atrasar.
-- ⏸️ Correr el pipeline de ML contra producción — **en pausa, a debatir con el equipo** (ver §7).
-- ⏸️ Crear el workflow `ml.yml` — **en pausa, a debatir con el equipo** (ver §7).
+- ✅ **Pipeline de ML corrido contra producción** (2026-07-22, ver §8).
+- ✅ **Workflows `dbt.yml` y `ml.yml` creados** (2026-07-24, ver §7 y §8) — falta mergearlos.
+- ✅ **Prophet remedido sobre 157 series** (2026-07-24): pierde en las dos fuentes; queda
+  descartado para el MVP (§8).
 
 ---
 
-## 7. Decisión pendiente: cómo desplegar M4 (a debatir con el equipo)
+## 7. Decisión de despliegue de M4 — ✅ RESUELTA (2026-07-24)
 
-**Pregunta a decidir:** cómo se ejecuta por primera vez (y luego de forma
-recurrente) el pipeline de ML para poblar `ml.*` y materializar los marts gold.
-De esto depende cerrar las issues Tier B (#32, #33, #35).
+**Decidido:** dos workflows separados, **dbt diario** y **ML semanal**
+(`.github/workflows/dbt.yml` y `ml.yml`, creados el 2026-07-24 — ver §8). Se
+descartó el workflow único: el reparto evita que un fallo de la rama de ML frene
+el refresco diario de precios.
 
-### Opciones sobre la mesa
+Queda registro de las opciones que se evaluaron y de las consideraciones técnicas,
+porque siguen valiendo para #27 (Dagster vs Actions):
+
+### Opciones que estuvieron sobre la mesa
 - **A) Correr una vez en local** (rápido, aísla fallos de código de fallos de CI;
   idempotente, poblaría prod de inmediato). Desventaja: no queda automatizado.
+  → Es lo que efectivamente pasó el 2026-07-22.
 - **B) Workflow-first**: crear `ml.yml` y disparar el pipeline desde ahí. Más limpio
   como destino final; evita una corrida manual desechable.
 - **C) Híbrido**: smoke-test local para de-riesgar y luego el workflow como automatización.
+  → **Es el camino que se siguió**: corrida manual el 22-jul, workflows el 24-jul.
 
-### Consideraciones técnicas (relevantes para decidir)
+### Consideraciones técnicas (se resolvieron así)
 1. **Secrets — el punto clave.** El pipeline tiene dos tramos con conexiones distintas:
    - ML batch (`run_entrenamiento/anomalias/backtesting`) usa `SUPABASE_DB_URL` →
      **el secret YA existe** (confirmado con `gh secret list`).
@@ -156,16 +170,100 @@ De esto depende cerrar las issues Tier B (#32, #33, #35).
 5. **Prudencia sugerida:** empezar `workflow_dispatch`-only (disparo manual), verificar
    verde, y recién después agregar `cron`. Reusar el patrón de "issue de alerta on-failure"
    de `carga-supabase.yml`.
-6. **Relación con #27** (decidir Dagster OSS vs GitHub Actions): esta decisión de
-   orquestación del ML se solapa con #27; conviene resolverlas juntas.
+6. **Relación con #27** (decidir Dagster OSS vs GitHub Actions): se resuelve por
+   ahora quedándose en GitHub Actions. #27 sigue abierta para el futuro.
 
-**Estado:** ninguna acción ejecutada. Pendiente de decisión del equipo.
+**Estado:** workflows creados el 2026-07-24, **pendientes de merge a `main`**
+(los workflows solo se disparan desde la rama por defecto). Ambos nacen
+`workflow_dispatch`-only, con el `cron` escrito y comentado: se habilita después
+de la primera corrida manual en verde.
 
 ---
 
 ## 8. Bitácora de cambios
 
 Registro cronológico de cada acción realizada sobre el proyecto en estas sesiones.
+
+### 2026-07-24 — orquestación (dbt + ML) y veredicto final sobre Prophet
+
+**Verificación previa (lectura en prod).** Se confirmó que el diagnóstico de §5 no
+era teórico: `gold.fct_precio_diario` volvió a quedarse en `max(fecha_captura)=
+2026-07-22` mientras marketplace y OSINERGMIN ya tenían bronze del 23-jul. Dos días
+de atraso a los dos días del refresco manual.
+
+**Workflows creados (pendientes de merge):**
+
+| Archivo | Cadencia | Alcance |
+|---|---|---|
+| `.github/workflows/dbt.yml` | diaria 22:00 UTC (comentada) | `dbt build --exclude "fct_predicciones+" "fct_anomalias+"` |
+| `.github/workflows/ml.yml` | lunes 23:00 UTC (comentada) | los 3 runners de `observatorio/ml/` + `dbt build --select fct_predicciones fct_anomalias` |
+| `.github/actions/entorno-dbt/` | — | action compuesta: deriva los 5 `SUPABASE_DB_*` desde `SUPABASE_DB_URL` |
+
+- **0 secrets nuevos**, como se propuso en §7: la action parsea `SUPABASE_DB_URL`
+  (el único secret que existe), fuerza el puerto **5432** y enmascara la contraseña
+  con `::add-mask::`. Verificado abriendo una conexión a prod con exactamente esos
+  cinco parámetros.
+- Ambos selectores verificados con `dbt ls` contra el proyecto real: el diario
+  resuelve a los 7 modelos de precios, el semanal a los 2 marts de ML y sus tests.
+- `ml.yml` **no declara `PYTHONUTF8=1`** (rompe Prophet, §8 del 22-jul) y corre en
+  `ubuntu-latest`.
+- Ambos nacen `workflow_dispatch`-only con el `cron` comentado, y crean issue de
+  alerta on-failure reusando el patrón de `carga-supabase.yml`.
+
+**Veredicto final sobre Prophet: pierde, y con más datos pierde más.**
+
+El veredicto del 22-jul se había medido sobre 15 series, y el backfill histórico de
+SISAP (#16) entró el 23-jul multiplicando por 10 la población modelable. Se remidió
+el backtesting **en memoria, sin escribir en prod**, sobre las **157 series** que
+pasan el umbral hoy:
+
+| Fuente | series | naive | media móvil | prophet | Prophet gana |
+|---|---:|---:|---:|---:|---:|
+| `sisap_mayorista` | 83 | **4.05 %** | 4.95 % | 8.45 % | 5/83 (6 %) |
+| `sisap_minorista` | 68 | **1.58 %** | 1.65 % | 4.48 % | 6/68 (9 %) |
+
+`sisap_mayorista` es la familia más densa que existe (181 observaciones contra 82 de
+minorista) y ahí Prophet queda **2.1× peor** que repetir el último precio. La causa
+es la estructura de huecos, no el conteo: hueco mediano de 5 días y agujeros de hasta
+332–378 días, con el precio moviéndose 3–5 % entre observaciones consecutivas.
+**Subir el umbral queda descartado** — se probó contra las series más densas y
+empeora. Detalle en `docs/ml.md`.
+
+**Consecuencia aplicada: se sirve `naive` con bandas propias.** `config.USAR_PROPHET`
+pasa a `False` y `config.MODELO_SERVIDO` a `"naive"`. Prophet no se borra: el
+backtesting lo sigue midiendo, así que el veredicto es revisable con datos.
+
+Al apagarlo aparecían dos problemas que se resolvieron en el mismo cambio:
+
+1. **Las bandas se habrían quedado en null** (`precio_pred_inf/sup` del mart), y el
+   dashboard de #38 sin nada que dibujar: Prophet era quien las producía. Ahora
+   `baseline.agregar_bandas` las estima de la volatilidad de la propia serie,
+   normalizada por el hueco entre observaciones y ensanchada con `σ·√h`. Verificado
+   contra las 174 series de prod: solo 3 (1.7 %) quedan sin banda.
+2. **La comprobación de cobertura habría abortado corridas sanas.** `run_entrenamiento`
+   calculaba por su cuenta cuántas series esperaba de cada modelo, así que al apagar
+   Prophet esperaba 157 series suyas, obtenía 0 y fallaba con "se perdió el 100 % de
+   las series de prophet" sin escribir nada. La regla de decisión se unificó en
+   `prophet_modelo.modelo_de`, que ahora usan tanto el pronóstico como la cobertura.
+   Los tests lo detectaron antes de llegar a producción y quedó una regresión que lo
+   cubre.
+
+Suite: **207 tests en verde** (7 nuevos).
+
+**Sobre la ausencia de SISAP del 23-jul: no es un fallo.** El 2026-07-23 fue feriado
+en Perú (Día de la Fuerza Aérea) y el scraper lo detectó por diseño:
+`📅 Thursday 23/07/2026 — día no hábil, SISAP no publica. Saltando sin error.`
+Que `bronze.sisap_precios` se quedara en 22-jul mientras marketplace y OSINERGMIN
+iban al 23 es **el comportamiento correcto**. Desde el 2026-06-01 falta un único día
+hábil de SISAP en bronze (26-jun).
+
+**Riesgo latente que sí conviene atender.** `carga-supabase` corre a las 21:00 UTC
+asumiendo que los scrapers ya terminaron, y las corridas de SISAP tienen una
+dispersión grande: la mayoría dura entre 30 s y 21 min (terminan ~20:30 UTC), pero la
+del 23-jul tardó **3 h 27 min** y la del 17-jul se **canceló a las 24 h** (es la
+issue #110, aún abierta). En un día hábil con ese retraso, el CSV perdería la ventana
+de carga. Todavía no pasó, pero el margen es de apenas 30 minutos.
+Mitigación: mover el cron de la carga o encadenarlo con `workflow_run`.
 
 ### 2026-07-22 (2/2) — primera corrida de M4 en producción
 

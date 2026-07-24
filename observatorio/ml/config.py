@@ -1,6 +1,6 @@
 """Constantes de la capa de modelado (ML) — Milestone M4.
 
-Acá viven solo los parámetros estables del modelado. Las decisiones detrás de
+Aquí viven solo los parámetros estables del modelado. Las decisiones detrás de
 cada valor (documentadas en el plan M4):
 
   * **Fuentes modeladas (MVP): SISAP minorista/mayorista.** Es la única fuente
@@ -19,6 +19,22 @@ from __future__ import annotations
 # Deben existir como valores de `fuente` en gold.fct_precio_diario.
 FUENTES_MODELADAS: tuple[str, ...] = ("sisap_minorista", "sisap_mayorista")
 
+# --- Modelo que se sirve en producción -----------------------------------------
+# Prophet quedó DESCARTADO para el MVP con evidencia (backtesting del 2026-07-24
+# sobre las 157 series que pasan el umbral): pierde contra el naive en las dos
+# fuentes —mayorista 8.45% vs 4.05%, minorista 4.48% vs 1.58% de MAPE mediano— y
+# gana en apenas el 6–9% de las series. Más historia lo empeora: la familia más
+# densa (mayorista, 181 obs) es donde peor queda, porque el problema es la
+# estructura de huecos (mediano 5 días, agujeros de hasta 378) y no el conteo.
+# Se deja detrás de un flag en vez de borrarlo: el backtesting lo sigue midiendo
+# en cada corrida, así que si alguna vez entra una fuente de muestreo regular el
+# veredicto se puede revisar con datos. Ver docs/ml.md.
+USAR_PROPHET: bool = False
+
+# Baseline que se sirve cuando Prophet está apagado o la serie es corta.
+# "naive" (repetir el último precio) le gana a "media_movil" en las dos fuentes.
+MODELO_SERVIDO: str = "naive"
+
 # --- Umbral de historia para modelar con Prophet -------------------------------
 # Series por debajo de ESTOS mínimos caen al baseline (ver baseline.py).
 MIN_OBSERVACIONES: int = 60  # nº de días observados en la serie
@@ -29,6 +45,13 @@ HORIZONTE_DIAS: int = 14  # días hacia adelante a predecir
 
 # --- Baseline (referencia para el backtesting) ---------------------------------
 VENTANA_MEDIA_MOVIL_DIAS: int = 7  # ventana de calendario de la media móvil naive
+
+# --- Bandas de incertidumbre del baseline --------------------------------------
+# Los baselines no traen bandas propias, así que se estiman de la volatilidad
+# histórica de la serie (ver baseline.volatilidad_diaria). Ancho del intervalo
+# igual al default de Prophet (80%) para no cambiar la lectura del dashboard al
+# apagar Prophet.
+NIVEL_BANDA: float = 0.80
 
 # --- Backtesting walk-forward --------------------------------------------------
 # Nº de cortes temporales (folds) y paso en días de calendario entre cortes. Con

@@ -6,7 +6,7 @@ La fuente es el buscador de Estaciones de Servicio (EESS) de Facilito:
 
 El sitio está protegido con reCAPTCHA v3 (token minado por JS en cada carga de
 página), así que la navegación se hace con navegador headless (Playwright) en
-``client.py`` — no con ``requests``. Acá viven solo las constantes estables.
+``client.py`` — no con ``requests``. Aquí viven solo las constantes estables.
 
 Los códigos de departamento y producto se leyeron del ``<select>`` del propio
 formulario (junio 2026). Las **provincias** NO se hardcodean: se descubren en
