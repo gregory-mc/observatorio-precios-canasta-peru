@@ -15,6 +15,9 @@
   (14 días entre el 8 y el 22 de julio; 2 días más al 24).
 - **ML (M4):** ✅ en producción y **automatizado**: `ml.yml` corre los lunes a las
   23:00 UTC. Sirve `naive` con bandas empíricas; Prophet quedó apagado (§8).
+- **Calidad de datos:** ✅ dos correcciones el 24-jul (§8): unidad de SISAP normalizada
+  a S/kg (`equiv_kg_lt`) y validación de canasta reformulada (#102 cerrada, con rangos
+  de precio por producto). Test dbt `no_negativo` como guarda del mart de predicciones.
 - **M5 (dashboard/API) y M6 (deploy/bot):** 🔲 sin empezar.
 
 Frase clave: **ya no falta código ni orquestación** — dbt y ML corren solos desde el
@@ -24,34 +27,33 @@ predecía precios negativos: ver §8.
 
 ---
 
-## 2. Verificación en producción (Supabase, solo lectura)
+## 2. Verificación en producción (Supabase, solo lectura, 2026-07-24)
 
 | Objeto | Estado | Filas | Última fecha |
 |---|---|---|---|
-| `bronze.*` (sisap/marketplace/osinergmin) | ✅ | 6,257 / 438,952 / 313,193 | 2026-07-22 |
-| `silver.stg_*` (vistas) | ✅ | 5,571 / 403,482 / 311,534 | 2026-07-22 |
-| `gold.fct_precio_diario` | ✅ | **400,680** | 2026-07-22 |
-| `gold.fct_precio_medias_moviles` | ✅ | 400,680 | 2026-07-22 |
-| `gold.dim_fecha` | ✅ | 916 | 2026-07-22 |
+| `bronze.*` (sisap/marketplace/osinergmin) | ✅ | 22,028 / 454,270 / 339,840 | 2026-07-24 |
+| `gold.fct_precio_diario` | ✅ | **423,085** | 2026-07-23 |
+| `gold.fct_precio_medias_moviles` | ✅ | 423,085 | 2026-07-23 |
+| `gold.dim_fecha` | ✅ | 932 | 2026-07-23 |
 | `gold.canasta_consumo_dept` | ✅ | 150 | — |
-| `ml.predicciones_raw` | ✅ | 2,282 | corrida 2026-07-22 |
-| `ml.anomalias_raw` | ✅ | 90 | corrida 2026-07-22 |
-| `ml.backtest_metricas` | ✅ | 45 | corrida 2026-07-22 |
-| `gold.fct_predicciones` | ✅ | 154 | corrida 2026-07-22 |
-| `gold.fct_anomalias` | ✅ | 22 | corrida 2026-07-22 |
+| `ml.predicciones_raw` | ✅ | 4,508 | corrida 2026-07-24 |
+| `ml.anomalias_raw` | ✅ | 568 | corrida 2026-07-24 |
+| `ml.backtest_metricas` | ✅ | 498 | corrida 2026-07-24 |
+| `gold.fct_predicciones` | ✅ | 224 | corrida 2026-07-24 |
+| `gold.fct_anomalias` | ✅ | 80 | corrida 2026-07-24 |
 
-Las tablas `ml.*` y los marts de ML **existen desde el 2026-07-22**: primera corrida
-del pipeline M4 en producción (§8). Sigue sin haber workflow: la corrida fue manual.
+Todo fresco: `dbt.yml` (diario) refrescó gold al 23-jul y `ml.yml` corrió el 24-jul
+con los precios ya normalizados a S/kg (§8). `bronze.sisap` va al 22-jul porque el
+23 fue feriado y el 24 aún no cerraba la carga al momento de la lectura — no es un
+fallo (§8).
 
-**Gold estuvo congelado 14 días** (detectado y corregido el 2026-07-22, ver §8): los
-marts son `table` y solo se materializan cuando alguien corre `dbt build` a mano.
-Entre el 8 y el 22 de julio nadie lo corrió, así que bronze/silver avanzaban a diario
-y gold se quedó en `max(fecha_captura)=2026-07-08` / 292,502 filas. Mismo origen que
-el gap de M4: **no existe workflow de dbt**. Mientras no lo haya, gold vuelve a
-atrasarse un día por día.
+> **Historia del congelamiento (resuelta).** Gold llegó a estar 14 días atrás (8→22
+> jul) porque los marts son `table` y nadie corría `dbt build`. Se refrescó a mano el
+> 22-jul, volvió a atrasarse 2 días, y desde el 24-jul el workflow `dbt.yml` lo
+> mantiene al día solo. Causa raíz cerrada.
 
-Calidad de código: **170 tests en verde** (suite completa) + **49 nodos dbt en verde**
-(`dbt build`, 0 errores).
+Calidad de código: **210 tests en verde** (suite completa) + dbt en verde
+(`fct_predicciones` PASS=14 con el test `no_negativo`; marts de precio PASS=23).
 
 ---
 
@@ -67,13 +69,15 @@ Calidad de código: **170 tests en verde** (suite completa) + **49 nodos dbt en 
 | #34 | Detección anomalías >2.5σ (algoritmo) | código | `observatorio/ml/anomalias.py` + test |
 | #15 | Scraper OSINERGMIN | código + workflow | módulo `ingesta/osinergmin/` + `ingesta-osinergmin.yml` (⚠️ dato en prod no verificado en este snapshot) |
 
-### 🟡 Tier B — código listo pero el entregable EXIGE ejecución/materialización que NO ocurrió en prod → NO cerrar aún
+### 🟢 Tier B — entregable YA materializado en prod (desde 2026-07-22, automatizado desde 24-jul) → listas para cerrar
 
-| Issue | Título | Falta para estar 100% |
+| Issue | Título | Estado |
 |---|---|---|
-| #32 | Entrenamiento batch de todos los pares | el batch **nunca corrió** → `ml.predicciones_raw` no existe |
-| #33 | Backtesting walk-forward + métricas | `ml.backtest_metricas` **no existe** (código listo, sin datos) |
-| #35 | Tabla `fct_anomalias` **materializada** por dbt | el mart **no está materializado** en prod |
+| #32 | Entrenamiento batch de todos los pares | `ml.predicciones_raw` poblada (4,508 filas); corre en `ml.yml` |
+| #33 | Backtesting walk-forward + métricas | `ml.backtest_metricas` poblada (498 filas) |
+| #35 | Tabla `fct_anomalias` **materializada** por dbt | mart materializado (80 filas) |
+
+Pendiente solo el cierre en GitHub con el comentario de evidencia (no bloquea nada).
 
 ### Mapeo issue → PR (para el comentario de cierre, cuando se autorice)
 
@@ -89,8 +93,8 @@ Calidad de código: **170 tests en verde** (suite completa) + **49 nodos dbt en 
 |---|---|---|
 | M1 Setup | ✅ | Repo + Supabase |
 | M2 Ingesta | ✅ | SISAP + Marketplace + INEI + OSINERGMIN en prod |
-| M3 dbt medallion | ✅ | silver + gold de precios poblados (292k filas) |
-| M4 ML | ✅ | **corrido en prod el 2026-07-22**; falta automatizarlo y decidir qué hacer con Prophet (pierde contra el baseline, §8) |
+| M3 dbt medallion | ✅ | silver + gold de precios poblados (423k filas), automatizado (`dbt.yml`) y con unidad normalizada a S/kg (§8) |
+| M4 ML | ✅ | automatizado (`ml.yml` semanal); sirve `naive` con bandas, Prophet apagado con evidencia (§8) |
 | M5 Dashboard/API | 🔲 | sin empezar (`observatorio/dashboard/` y `/api/` no existen) |
 | M6 Deploy/bot | 🔲 | sin empezar |
 
@@ -98,16 +102,20 @@ Calidad de código: **170 tests en verde** (suite completa) + **49 nodos dbt en 
 
 ## 5. Gaps / pendientes estructurales
 
-1. **Añadir un test dbt de "precio no negativo"** a `fct_predicciones`: ahora que ya
-   no hay filas negativas en el mart (§8) el test pasaría en verde y blindaría contra
-   una futura reactivación de Prophet.
-2. **Deuda metodológica de canasta:** issues #20 / #102 / #21 (validación canasta y
-   idempotencia de scrapers).
+1. **M5 (dashboard/API)** — el siguiente hito de producto. Ya tiene de qué alimentarse:
+   gold fresco y automatizado, predicciones y anomalías al día.
+2. **Idempotencia de scrapers (#21):** el camino diario ya es idempotente; falta
+   unificar el flag `--fecha` y un test que lo garantice de forma ejecutable.
 3. **Margen estrecho entre SISAP y `carga-supabase`** (§8): la carga corre a las 21:00
    UTC y SISAP suele terminar ~20:30, pero ha tardado hasta 3 h 27 min. Riesgo
-   latente, todavía no materializado.
+   latente, todavía no materializado. Relacionado: #110 (una corrida se colgó 24 h).
 
 **Resueltos:**
+- ~~Unidad de SISAP mezclada (cajón/millar vs kg).~~ ✅ **2026-07-24** (§8, PR #117):
+  `fct_precio_diario` normaliza con `equiv_kg_lt`.
+- ~~Validación de canasta mal planteada (vs-IPC).~~ ✅ **#102 cerrada** (§8, PR #116):
+  solidez interna + rangos de precio por producto.
+- ~~Test dbt de "precio no negativo".~~ ✅ **2026-07-24** (§8, PR #115): guarda del mart.
 - ~~Falta workflow de transformación (dbt y ML).~~ ✅ **En producción desde el
   2026-07-24** (§8): mergeados, corridos en verde y con `cron` habilitado.
 - ~~Correr M4 una vez para poblar `ml.*`.~~ ✅ **Hecho 2026-07-22** (§8).
@@ -124,9 +132,11 @@ Calidad de código: **170 tests en verde** (suite completa) + **49 nodos dbt en 
 - ✅ **Gold refrescado** (2026-07-22, `dbt build` a mano, 49 nodos en verde) — recuperados
   los 14 días de atraso. **No resuelve la causa**: sin workflow, se vuelve a atrasar.
 - ✅ **Pipeline de ML corrido contra producción** (2026-07-22, ver §8).
-- ✅ **Workflows `dbt.yml` y `ml.yml` creados** (2026-07-24, ver §7 y §8) — falta mergearlos.
+- ✅ **Workflows `dbt.yml` y `ml.yml` en producción** (2026-07-24, PRs #113/#114): mergeados,
+  corridos en verde y con `cron` habilitado (dbt diario, ML semanal).
 - ✅ **Prophet remedido sobre 157 series** (2026-07-24): pierde en las dos fuentes; queda
-  descartado para el MVP (§8).
+  descartado para el MVP, apagado por flag (§8).
+- ✅ **Test dbt `no_negativo`, canasta #102 y unidad de SISAP** (2026-07-24, PRs #115/#116/#117, §8).
 
 ---
 
@@ -180,16 +190,70 @@ UTC, ML los lunes a las 23:00 UTC.
 
 ## 8. Bitácora de cambios
 
-Registro cronológico de cada acción realizada sobre el proyecto en estas sesiones.
+Registro cronológico de cada acción realizada sobre el proyecto en estas sesiones
+(lo más reciente primero).
 
-### 2026-07-24 — orquestación (dbt + ML) y veredicto final sobre Prophet
+### 2026-07-24 (3/3) — calidad de datos: test no-negativo, canasta (#102) y unidad SISAP
+
+Tres cambios encadenados, cada uno destapado por el anterior.
+
+**1. Test dbt `no_negativo`** (PR #115). Blindaje contra el bug de Prophet (predecía
+precios negativos, ver entrada 1/3). Test genérico propio en `dbt/tests/generic/`
+—sin `dbt_utils`, que el proyecto no usa— sobre `precio_pred`, `precio_pred_inf` y
+`precio_pred_sup` de `fct_predicciones`. Ignora NULL (las bandas del baseline pueden
+serlo). Verificado que **no es un no-op**: el SQL compilado es `... where precio_pred
+< 0`, que en dbt falla si devuelve una fila. `dbt test --select fct_predicciones` →
+PASS=14.
+
+**2. Reformulación del criterio de validación de la canasta — issue #102 (PR #116),
+CERRADA.** El grueso ya venía del #20 (veredicto = solidez interna, contraste vs-IPC
+degradado a descriptivo). Faltaba la **propuesta 1**: el chequeo de "precios
+plausibles" usaba un único rango 0.1–100/kg para todo y solo atrapaba errores de
+unidad groseros (una papa a S/45/kg pasaba). Se implementaron **rangos por producto**
+(`RANGOS_PLAUSIBLES_SOLKG`), calibrados sobre la distribución real de SISAP minorista
+2024–2026 (p01–p99) con margen para picos de escasez. Minorista Lima sigue `CANASTA
+SÓLIDA`; suite +3 tests.
+
+**3. Normalización de unidad de SISAP a S/kg (PR #117) — cierra el hallazgo lateral
+del #102.** El chequeo por producto del punto 2 destapó que `fct_precio_diario`
+mezclaba unidades: SISAP mayorista cotiza varios productos por cajón/bolsa/millar, no
+por kg (tomate en "Cajón chico" de 27 kg → S/63/cajón; limón en bolsa de 45 kg →
+S/72). La fuente **ya publicaba el factor** en `bronze.sisap_precios.equiv_kg_lt`, y
+el staging decía que la normalización se hacía "en marts (#24)" pero nunca se
+implementó. Ahora el mart divide `precio_prom / equiv_kg_lt`.
+
+| Producto | Mayorista antes | Después | Minorista (ref.) |
+|---|---|---|---|
+| limón | mediana S/55 | **S/1.58/kg** | S/4.36 |
+| tomate | mediana S/62 | **S/2.31/kg** | S/4.48 |
+
+- En **todos** los productos mayorista quedó por debajo de minorista, como debe ser.
+- MVP minorista tiene `equiv=1.0` → sin cambios; **0 filas** priceadas con equiv NULL.
+- Corrige toda la cadena: `fct_precio_medias_moviles` y el ML leen de
+  `fct_precio_diario`. Se re-corrió `ml.yml` para refrescar las predicciones con los
+  precios nuevos (mayorista limón S/2.13, tomate S/2.45). El chequeo de precios de la
+  validación en mayorista pasó de `REVISAR` a OK (sigue `REVISAR` por cobertura, que
+  es esperable: mayorista no tiene los 6 productos MVP con peso todos los meses).
+- Detectado y corregido el mismo día; documentado en `docs/validacion_canasta_vs_ipc.md`
+  y en el schema del staging (`equiv_kg_lt`, `unidad_medida`).
+
+**Cierres de esta jornada:** #102 cerrada en GitHub (con mapeo DoD → evidencia).
+Suite: **210 tests en verde**.
+
+### 2026-07-24 (2/3) — crons habilitados (PR #114)
+
+Tras ver las dos primeras corridas automáticas en verde (entrada 1/3), se
+descomentaron los `cron`: **dbt diario 22:00 UTC**, **ML lunes 23:00 UTC**. Antes
+eran `workflow_dispatch`-only. Ambos figuran `active` en `gh workflow list`.
+
+### 2026-07-24 (1/3) — orquestación (dbt + ML) y veredicto final sobre Prophet
 
 **Verificación previa (lectura en prod).** Se confirmó que el diagnóstico de §5 no
 era teórico: `gold.fct_precio_diario` volvió a quedarse en `max(fecha_captura)=
 2026-07-22` mientras marketplace y OSINERGMIN ya tenían bronze del 23-jul. Dos días
 de atraso a los dos días del refresco manual.
 
-**Workflows creados (pendientes de merge):**
+**Workflows creados** (PR #113, mergeado; los `cron` se habilitaron después — ver 2/3):
 
 | Archivo | Cadencia | Alcance |
 |---|---|---|
