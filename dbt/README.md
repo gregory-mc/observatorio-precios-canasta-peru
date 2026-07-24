@@ -51,11 +51,11 @@ psycopg), pero dbt-postgres necesita los campos por separado.
 > las tienen: lo único que existe es `SUPABASE_DB_URL`. Se derivan de ahí
 > parseando la URL antes de invocar dbt (verificado contra prod el 2026-07-22),
 > lo que deja una sola fuente de verdad y 0 secrets nuevos para el futuro
-> workflow. Recordá forzar el puerto **5432**: la URL apunta al pooler (6543).
+> workflow. Hay que forzar el puerto **5432**: la URL apunta al pooler (6543).
 
 > **Nota sobre el pooler de Supabase.** dbt funciona mejor contra el puerto de
 > sesión / conexión directa (`5432`) que contra el *transaction pooler* (`6543`),
-> que no soporta prepared statements. La carga usa `6543`; para dbt preferí `5432`.
+> que no soporta prepared statements. La carga usa `6543`; para dbt se usa `5432`.
 
 ## Uso
 
@@ -68,8 +68,21 @@ dbt parse     # valida que el proyecto compila (sin conectar)
 dbt build     # construye modelos + corre sus tests
 ```
 
-> ⚠️ **dbt todavía no está automatizado**: no hay workflow que lo dispare, así que
-> los marts (que son `table`) solo se refrescan cuando alguien corre `dbt build` a
-> mano. Entre el 2026-07-08 y el 2026-07-22 nadie lo hizo y `gold` quedó 14 días
-> atrás mientras bronze y silver (que son `view`) seguían al día. Mientras no exista
-> ese workflow, conviene correrlo a diario. Ver `docs/estado_proyecto.md` §5.
+> ⚠️ **Los marts son `table`**: solo se refrescan cuando corre `dbt build`. Entre el
+> 2026-07-08 y el 2026-07-22 nadie lo corrió y `gold` quedó 14 días atrás mientras
+> bronze y silver (que son `view`) seguían al día. Ver `docs/estado_proyecto.md` §5.
+
+## Automatización
+
+Desde el 2026-07-24 hay dos workflows que se reparten los modelos:
+
+| Workflow | Cadencia | Construye |
+|---|---|---|
+| `.github/workflows/dbt.yml` | diaria, 22:00 UTC | todo **menos** los marts de ML (`--exclude "fct_predicciones+" "fct_anomalias+"`) |
+| `.github/workflows/ml.yml` | semanal, lunes | solo `fct_predicciones` y `fct_anomalias`, después del batch de `observatorio/ml/` |
+
+El reparto es deliberado: las fuentes `ml.*` solo cambian cuando corre el batch
+semanal, y así un fallo en la rama de ML nunca frena el refresco diario de precios.
+
+Ambos derivan la conexión con la action compartida `.github/actions/entorno-dbt`,
+que parsea `SUPABASE_DB_URL` y fuerza el puerto 5432 (ver la nota del pooler abajo).

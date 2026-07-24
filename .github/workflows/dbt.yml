@@ -1,0 +1,92 @@
+name: Transformaciones dbt (silver → gold)
+
+# Refresca los marts de precios. Sin esto, `gold` se congela: staging es `view`
+# (se refresca solo) pero los marts son `table` y solo existen cuando alguien
+# corre `dbt build`. Entre el 2026-07-08 y el 2026-07-22 nadie lo corrió y gold
+# quedó 14 días atrás (ver docs/estado_proyecto.md §2).
+#
+# Los marts de ML (fct_predicciones / fct_anomalias) se excluyen a propósito: sus
+# fuentes `ml.*` solo cambian cuando corre ml.yml (semanal), así que los
+# materializa ese workflow. Además, así un fallo en la rama de ML nunca frena el
+# refresco diario de precios.
+
+on:
+  # ⚠️ Habilitar el cron recién después de una corrida manual en verde
+  # (descomentar estas 3 líneas). 22:00 UTC = 17:00 Lima, una hora después de
+  # `carga-supabase` (21:00 UTC), así bronze del día ya está cargado.
+  # schedule:
+  #   - cron: "0 22 * * *"
+  workflow_dispatch:
+    inputs:
+      select:
+        description: 'Selector de dbt (vacío = todo menos los marts de ML)'
+        required: false
+        default: ''
+      full_refresh:
+        description: 'Reconstruir desde cero (true/false)'
+        required: false
+        default: 'false'
+
+# Dos corridas simultáneas escribirían los mismos marts.
+concurrency:
+  group: dbt-prod
+  cancel-in-progress: false
+
+jobs:
+  build:
+    # Supabase es público (sin el geo-bloqueo del MIDAGRI): no requiere el
+    # runner self-hosted.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Instalar dbt
+        run: pip install -e ".[dbt]"
+
+      - uses: ./.github/actions/entorno-dbt
+        with:
+          db-url: ${{ secrets.SUPABASE_DB_URL }}
+
+      - name: dbt build
+        env:
+          DBT_PROFILES_DIR: ${{ github.workspace }}/dbt
+          SELECT: ${{ github.event.inputs.select || '' }}
+          FULL_REFRESH: ${{ github.event.inputs.full_refresh || 'false' }}
+        working-directory: dbt
+        run: |
+          set -euo pipefail
+          ARGS=()
+          if [ -n "$SELECT" ]; then
+            ARGS+=(--select "$SELECT")
+          else
+            ARGS+=(--exclude "fct_predicciones+" "fct_anomalias+")
+          fi
+          if [ "$FULL_REFRESH" = "true" ]; then ARGS+=(--full-refresh); fi
+          dbt build "${ARGS[@]}"
+
+      - name: 🚨 Crear issue de alerta por fallo
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --title "🚨 [dbt] Fallo del build silver→gold $(date -u -d '-5 hours' +%Y-%m-%d)" \
+            --body "## Fallo en las transformaciones dbt
+
+          El workflow **${{ github.workflow }}** falló el $(date -u -d '-5 hours' +%F).
+          Mientras no se resuelva, \`gold\` se atrasa un día por día.
+
+          **Detalles:**
+          - Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          > Issue auto-creado por GitHub Actions — revisar logs del run para diagnóstico." \
+            --label "area:datos"

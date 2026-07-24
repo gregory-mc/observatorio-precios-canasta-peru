@@ -2,7 +2,7 @@
 según su **categoría raíz** de VTEX.
 
 La búsqueda por token trae mucho ruido (un "ft=limon" devuelve lejía, silicona
-de autos, etc.). Acá nos quedamos solo con SKUs cuya raíz de categoría es de
+de autos, etc.). Aquí nos quedamos solo con SKUs cuya raíz de categoría es de
 alimentos. Las raíces salen del árbol real de Marketplace:
     /api/catalog_system/pub/category/tree/1
 

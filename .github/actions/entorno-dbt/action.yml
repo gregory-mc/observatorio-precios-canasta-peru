@@ -1,0 +1,49 @@
+name: Entorno de conexión para dbt
+description: >
+  Deriva las 5 variables SUPABASE_DB_* que pide dbt/profiles.yml a partir del
+  único secret que existe (SUPABASE_DB_URL), forzando el puerto 5432.
+
+inputs:
+  db-url:
+    description: Connection string de Supabase (secrets.SUPABASE_DB_URL).
+    required: true
+
+runs:
+  using: composite
+  steps:
+    # dbt-postgres necesita host/port/user/password/dbname por separado, pero el
+    # repo solo tiene el secret SUPABASE_DB_URL. Parsearlo aquí evita crear 5
+    # secrets nuevos y deja una sola fuente de verdad (ver dbt/README.md).
+    #
+    # El puerto se fuerza a 5432 a propósito: la URL apunta al transaction pooler
+    # (6543), que no soporta prepared statements. La capa ML lo esquiva con
+    # prepare_threshold=None (observatorio/ml/conexion.py), pero dbt no puede.
+    - name: Derivar SUPABASE_DB_* desde SUPABASE_DB_URL
+      shell: bash
+      env:
+        SUPABASE_DB_URL: ${{ inputs.db-url }}
+      run: |
+        set -euo pipefail
+        python - <<'PY'
+        import os
+        from urllib.parse import unquote, urlparse
+
+        u = urlparse(os.environ["SUPABASE_DB_URL"])
+        valores = {
+            "SUPABASE_DB_HOST": u.hostname or "",
+            "SUPABASE_DB_PORT": "5432",
+            "SUPABASE_DB_USER": unquote(u.username or ""),
+            "SUPABASE_DB_PASSWORD": unquote(u.password or ""),
+            "SUPABASE_DB_NAME": (u.path or "").lstrip("/") or "postgres",
+        }
+        faltantes = [k for k, v in valores.items() if not v]
+        if faltantes:
+            raise SystemExit(f"SUPABASE_DB_URL no trae: {', '.join(faltantes)}")
+
+        # La contraseña queda enmascarada en los logs del run.
+        print(f"::add-mask::{valores['SUPABASE_DB_PASSWORD']}")
+        with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as fh:
+            for clave, valor in valores.items():
+                fh.write(f"{clave}={valor}\n")
+        print(f"✅ Conexión dbt → {valores['SUPABASE_DB_HOST']}:5432/{valores['SUPABASE_DB_NAME']}")
+        PY
