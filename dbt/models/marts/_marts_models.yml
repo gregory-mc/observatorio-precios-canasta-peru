@@ -129,11 +129,13 @@ models:
         tests: [not_null]
       - name: precio_pred
         description: "Precio pronosticado (promedio de las variedades del slug)."
-        tests: [not_null]
+        tests: [not_null, no_negativo]
       - name: precio_pred_inf
-        description: "Banda inferior (promedio; null si el modelo fue baseline)."
+        description: "Banda inferior (promedio; null si el modelo no la produce)."
+        tests: [no_negativo]
       - name: precio_pred_sup
-        description: "Banda superior (promedio; null si el modelo fue baseline)."
+        description: "Banda superior (promedio; null si el modelo no la produce)."
+        tests: [no_negativo]
       - name: modelo
         description: "Modelo usado ('prophet' | 'media_movil' | 'naive' | 'mixto')."
         tests:
