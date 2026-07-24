@@ -10,16 +10,17 @@
 ## 1. Resumen ejecutivo
 
 - **Ingesta (bronze):** ✅ en producción, automatizada y verde a diario.
-- **dbt (silver→gold de precios):** ✅ en producción con datos reales. Workflow
-  `dbt.yml` creado el 2026-07-24 (§8), **pendiente de merge**: hasta entonces gold
-  sigue congelándose (14 días entre el 8 y el 22 de julio; 2 días más al 24).
-- **ML (M4):** ✅ **corrido en producción el 2026-07-22** (predicciones, anomalías y
-  backtesting materializados). Workflow `ml.yml` creado el 2026-07-24, mismo estado.
+- **dbt (silver→gold de precios):** ✅ en producción y **automatizado** desde el
+  2026-07-24: `dbt.yml` corre a diario a las 22:00 UTC. Se acabó el congelamiento
+  (14 días entre el 8 y el 22 de julio; 2 días más al 24).
+- **ML (M4):** ✅ en producción y **automatizado**: `ml.yml` corre los lunes a las
+  23:00 UTC. Sirve `naive` con bandas empíricas; Prophet quedó apagado (§8).
 - **M5 (dashboard/API) y M6 (deploy/bot):** 🔲 sin empezar.
 
-Frase clave: **ya no falta código, falta orquestación** — y la orquestación ya está
-escrita, a la espera de mergearse. El modelo estrella (Prophet) resultó peor que el
-baseline y el veredicto se confirmó al remedirlo sobre 10× más series: ver §8.
+Frase clave: **ya no falta código ni orquestación** — dbt y ML corren solos desde el
+2026-07-24. Lo que falta es producto: M5. El modelo estrella (Prophet) resultó peor
+que el baseline, y al remedirlo sobre 10× más series se descubrió además que
+predecía precios negativos: ver §8.
 
 ---
 
@@ -97,9 +98,9 @@ Calidad de código: **170 tests en verde** (suite completa) + **49 nodos dbt en 
 
 ## 5. Gaps / pendientes estructurales
 
-1. **Mergear `dbt.yml` y `ml.yml`** — creados el 2026-07-24 pero sin efecto hasta que
-   estén en `main` (los workflows solo se disparan desde la rama por defecto).
-   Mientras tanto, gold se sigue atrasando un día por día.
+1. **Borrar las predicciones de Prophet del 22-jul** de `gold.fct_predicciones` (40 de
+   84 filas con precio negativo, §8) y añadir el test dbt de "precio no negativo",
+   que hoy fallaría contra ellas.
 2. ~~Decidir qué modelo sirve el MVP.~~ ✅ **Resuelto 2026-07-24**: se sirve `naive`
    con bandas empíricas (§8).
 3. **Deuda metodológica de canasta:** issues #20 / #102 / #21 (validación canasta y
@@ -109,8 +110,8 @@ Calidad de código: **170 tests en verde** (suite completa) + **49 nodos dbt en 
    latente, todavía no materializado.
 
 **Resueltos:**
-- ~~Falta workflow de transformación (dbt y ML).~~ ✅ **Escrito 2026-07-24** (§8);
-  queda el merge.
+- ~~Falta workflow de transformación (dbt y ML).~~ ✅ **En producción desde el
+  2026-07-24** (§8): mergeados, corridos en verde y con `cron` habilitado.
 - ~~Correr M4 una vez para poblar `ml.*`.~~ ✅ **Hecho 2026-07-22** (§8).
 - ~~No había CI de tests (push/merge no verificaba nada).~~ ✅ **Resuelto 2026-07-15**:
   workflow `ci.yml` corre pytest en cada PR y push a main (PR #109, mergeado). Ver §8.
@@ -173,10 +174,9 @@ porque siguen valiendo para #27 (Dagster vs Actions):
 6. **Relación con #27** (decidir Dagster OSS vs GitHub Actions): se resuelve por
    ahora quedándose en GitHub Actions. #27 sigue abierta para el futuro.
 
-**Estado:** workflows creados el 2026-07-24, **pendientes de merge a `main`**
-(los workflows solo se disparan desde la rama por defecto). Ambos nacen
-`workflow_dispatch`-only, con el `cron` escrito y comentado: se habilita después
-de la primera corrida manual en verde.
+**Estado:** ✅ **cerrado el 2026-07-24**. Workflows mergeados (PR #113), los dos
+corridos a mano en verde y los `cron` habilitados (PR #114): dbt diario a las 22:00
+UTC, ML los lunes a las 23:00 UTC.
 
 ---
 
@@ -249,6 +249,33 @@ Al apagarlo aparecían dos problemas que se resolvieron en el mismo cambio:
    cubre.
 
 Suite: **207 tests en verde** (7 nuevos).
+
+**Las dos primeras corridas automatizadas (mismo día, tras mergear #113):**
+
+| Workflow | Resultado |
+|---|---|
+| `dbt.yml` (run 30117943903) | PASS=49, ERROR=0 en 34 s · gold a 423,085 filas, al 23-jul |
+| `ml.yml` (run 30118895845) | 2,436 predicciones · 477 anomalías · 453 métricas · marts PASS=22 |
+
+La cobertura del entrenamiento reportó `naive 174/174` (ninguna serie esperada por
+Prophet, como debe ser con el flag apagado) y la del backtesting
+`media_movil 151/151 · naive 151/151 · prophet 151/151`: Prophet se sigue midiendo.
+Con ambos en verde se habilitaron los `cron` (PR #114).
+
+#### 🔴 Prophet no solo perdía: predecía precios negativos
+
+Al verificar el mart tras la corrida apareció algo que el MAPE no delataba. De las
+84 filas que Prophet había dejado en `gold.fct_predicciones` el 22-jul, **40
+predicen un precio negativo** (hasta **−3.84 soles**) y 48 tienen la banda inferior
+bajo cero. Prophet es un modelo aditivo sin cota inferior: con series cortas y
+ruidosas extrapola por debajo de cero sin inmutarse. Las 154 filas de `naive` del
+24-jul no tienen ninguna (mínimo 1.33), porque repetir un precio observado no puede
+salirse del rango de lo posible y la banda va recortada en 0.
+
+Las filas malas siguen en el mart como registro histórico —el grano conserva todas
+las corridas y el consumidor filtra la más reciente—, así que no se sirven. Queda
+anotado que un test dbt de "precio no negativo" sería natural aquí, pero **fallaría
+contra esas filas del 22-jul**: hay que borrarlas antes de añadirlo.
 
 **Sobre la ausencia de SISAP del 23-jul: no es un fallo.** El 2026-07-23 fue feriado
 en Perú (Día de la Fuerza Aérea) y el scraper lo detectó por diseño:

@@ -11,11 +11,11 @@ name: Transformaciones dbt (silver → gold)
 # refresco diario de precios.
 
 on:
-  # ⚠️ Habilitar el cron recién después de una corrida manual en verde
-  # (descomentar estas 3 líneas). 22:00 UTC = 17:00 Lima, una hora después de
-  # `carga-supabase` (21:00 UTC), así bronze del día ya está cargado.
-  # schedule:
-  #   - cron: "0 22 * * *"
+  # 22:00 UTC = 17:00 Lima, una hora después de `carga-supabase` (21:00 UTC), así
+  # bronze del día ya está cargado. Habilitado el 2026-07-24 tras la primera
+  # corrida manual en verde (PASS=49, ERROR=0 en 34s).
+  schedule:
+    - cron: "0 22 * * *"
   workflow_dispatch:
     inputs:
       select:
