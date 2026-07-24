@@ -98,14 +98,12 @@ Calidad de código: **170 tests en verde** (suite completa) + **49 nodos dbt en 
 
 ## 5. Gaps / pendientes estructurales
 
-1. **Borrar las predicciones de Prophet del 22-jul** de `gold.fct_predicciones` (40 de
-   84 filas con precio negativo, §8) y añadir el test dbt de "precio no negativo",
-   que hoy fallaría contra ellas.
-2. ~~Decidir qué modelo sirve el MVP.~~ ✅ **Resuelto 2026-07-24**: se sirve `naive`
-   con bandas empíricas (§8).
-3. **Deuda metodológica de canasta:** issues #20 / #102 / #21 (validación canasta y
+1. **Añadir un test dbt de "precio no negativo"** a `fct_predicciones`: ahora que ya
+   no hay filas negativas en el mart (§8) el test pasaría en verde y blindaría contra
+   una futura reactivación de Prophet.
+2. **Deuda metodológica de canasta:** issues #20 / #102 / #21 (validación canasta y
    idempotencia de scrapers).
-4. **Margen estrecho entre SISAP y `carga-supabase`** (§8): la carga corre a las 21:00
+3. **Margen estrecho entre SISAP y `carga-supabase`** (§8): la carga corre a las 21:00
    UTC y SISAP suele terminar ~20:30, pero ha tardado hasta 3 h 27 min. Riesgo
    latente, todavía no materializado.
 
@@ -276,6 +274,15 @@ Las filas malas siguen en el mart como registro histórico —el grano conserva 
 las corridas y el consumidor filtra la más reciente—, así que no se sirven. Queda
 anotado que un test dbt de "precio no negativo" sería natural aquí, pero **fallaría
 contra esas filas del 22-jul**: hay que borrarlas antes de añadirlo.
+
+**Borradas el 2026-07-24.** Se eliminaron las 210 filas de Prophet de la corrida
+22-jul en `ml.predicciones_raw` (origen del mart; el mart es `table` y se
+reconstruye desde ahí, así que borrar solo el mart no era durable) y se reconstruyó
+`fct_predicciones` con `dbt build --select fct_predicciones` (PASS=12, ERROR=0).
+Respaldadas antes a CSV. La media móvil del 22-jul (70 filas en el mart) y la
+corrida naive del 24-jul (154) quedan intactas. Verificado: **0 filas con precio o
+banda negativa** y **0 filas modelo='prophet'** en todo el mart. El test dbt de
+precio no negativo queda desbloqueado (pendiente nº1 de §5).
 
 **Sobre la ausencia de SISAP del 23-jul: no es un fallo.** El 2026-07-23 fue feriado
 en Perú (Día de la Fuerza Aérea) y el scraper lo detectó por diseño:
