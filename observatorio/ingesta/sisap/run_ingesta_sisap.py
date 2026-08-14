@@ -1,11 +1,12 @@
 # observatorio/ingesta/sisap/run_ingesta_sisap.py
 
+import argparse
 import csv
 import os
 import sys
 import time
 from dataclasses import asdict, fields
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import requests
@@ -126,25 +127,19 @@ def subir_a_r2(ruta_local: Path, clave_r2: str) -> None:
     print(f"☁️  Subido a R2: {clave_r2}")
 
 
-def ejecutar_ingesta_diaria() -> None:
+def ejecutar_ingesta_diaria(fecha: date | None = None) -> None:
     # Modo de prueba: fuerza fallo intencional para verificar que la alerta funciona
     if os.getenv("SIMULAR_FALLO", "false").lower() == "true":
         print("🧪 SIMULAR_FALLO=true — forzando fallo intencional para prueba de alertas.")
         sys.exit(1)
 
-    # Fecha objetivo: override manual (backfill) o sincronización horaria con Perú (UTC-5).
-    # FECHA_OVERRIDE permite re-ejecutar una fecha pasada cuando el cron no corrió a tiempo.
-    fecha_override = os.getenv("FECHA_OVERRIDE", "").strip()
-    if fecha_override:
-        try:
-            hora_peru = datetime.strptime(fecha_override, "%Y-%m-%d")
-        except ValueError:
-            print(
-                f"❌ FECHA_OVERRIDE inválida: '{fecha_override}'"
-                " — formato esperado YYYY-MM-DD."
-            )
-            sys.exit(1)
-        print(f"🗓️  FECHA_OVERRIDE activa — backfill manual para {fecha_override}.")
+    # Fecha objetivo: la pasada por --fecha (backfill de una fecha pasada) o, por
+    # defecto, hoy en hora de Perú (UTC-5). SISAP admite re-consultar fechas
+    # pasadas porque publica el histórico mes-a-la-fecha; los scrapers de precio
+    # vivo (marketplace, osinergmin) no. Ver docs/sources.md §Backfill.
+    if fecha is not None:
+        hora_peru = datetime(fecha.year, fecha.month, fecha.day)
+        print(f"🗓️  Fecha explícita (--fecha) — backfill manual para {fecha.isoformat()}.")
     else:
         hora_peru = datetime.utcnow() - timedelta(hours=5)
     str_fecha = hora_peru.strftime("%d/%m/%Y")
@@ -261,5 +256,30 @@ def ejecutar_ingesta_diaria() -> None:
         sys.exit(1)
 
 
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(
+        description="Ingesta diaria de precios SISAP (minorista + mayorista) a bronze."
+    )
+    ap.add_argument(
+        "--fecha",
+        help=(
+            "Fecha YYYY-MM-DD a ingestar (default: hoy en hora Lima). SISAP admite "
+            "fechas pasadas (backfill); los scrapers de precio vivo no. Reemplaza al "
+            "antiguo env var FECHA_OVERRIDE."
+        ),
+    )
+    args = ap.parse_args(argv)
+
+    fecha: date | None = None
+    if args.fecha:
+        try:
+            fecha = date.fromisoformat(args.fecha)
+        except ValueError:
+            ap.error(f"--fecha inválida: {args.fecha!r} (formato esperado YYYY-MM-DD)")
+
+    ejecutar_ingesta_diaria(fecha)
+    return 0
+
+
 if __name__ == "__main__":
-    ejecutar_ingesta_diaria()
+    sys.exit(main())
