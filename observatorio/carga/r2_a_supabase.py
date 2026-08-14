@@ -171,6 +171,23 @@ COLUMNAS_OSINERGMIN = [
     ("precio_soles_galon", "float"),
 ]
 
+# SENAMHI: una fila por estación × día (clima). El orden debe coincidir con
+# dataclass MedicionClima (ingesta/senamhi/models.py).
+COLUMNAS_CLIMA = [
+    ("fecha_captura", "date"),
+    ("fuente", "text"),
+    ("cod_estacion", "text"),
+    ("nombre", "text"),
+    ("categoria", "text"),
+    ("estado", "text"),
+    ("latitud", "float"),
+    ("longitud", "float"),
+    ("region", "text"),
+    ("precip_mm", "float"),
+    ("temp_max_c", "float"),
+    ("temp_min_c", "float"),
+]
+
 FUENTES = {
     "marketplace": {
         "tabla": "marketplace_precios",
@@ -212,12 +229,22 @@ FUENTES = {
             (f"osinergmin/{fecha}_osinergmin_combustibles.csv", "fecha_captura = %s", (fecha,)),
         ],
     },
+    # SENAMHI: clima diario por estación. Snapshot del día (una fila por estación),
+    # idempotente por fecha como marketplace. SENAMHI publica todos los días, así
+    # que la ausencia de archivo se espera siempre (sin predicado día-hábil).
+    "clima": {
+        "tabla": "clima_senamhi",
+        "columnas": COLUMNAS_CLIMA,
+        "tareas": lambda fecha: [
+            (f"clima/{fecha}_senamhi.csv", "fecha_captura = %s", (fecha,)),
+        ],
+    },
 }
 
 # Fuentes de la corrida diaria automática (`--fuente ambas`). El IPC del INEI es
 # un histórico one-shot, así que queda fuera del cron y sólo se carga a demanda
 # con `--fuente inei`.
-FUENTES_DIARIAS = ["marketplace", "sisap", "osinergmin"]
+FUENTES_DIARIAS = ["marketplace", "sisap", "osinergmin", "clima"]
 
 
 def ddl_tabla(tabla: str, columnas: list[tuple[str, str]]) -> str:

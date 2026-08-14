@@ -25,6 +25,7 @@ from .config import (
     TIMEOUT,
     TIPO_METEOROLOGICA,
     URL_MAPA,
+    URL_SERIE,
     USER_AGENT,
 )
 from .models import Estacion
@@ -46,6 +47,32 @@ def descargar_html_mapa(session: requests.Session | None = None) -> str:
     # warning para no ensuciar los logs del cron (solo datos públicos).
     requests.packages.urllib3.disable_warnings()  # type: ignore[attr-defined]
     resp = ses.get(URL_MAPA, headers={"User-Agent": USER_AGENT}, timeout=TIMEOUT, verify=False)
+    resp.raise_for_status()
+    return resp.text
+
+
+def descargar_serie(estacion: Estacion, session: requests.Session | None = None) -> str:
+    """Descarga el HTML de la serie diaria (``map_red_graf.php``) de una estación.
+
+    Arma los parámetros descubiertos en el JS del mapa (cod, estado, tipo_esta,
+    cate, cod_old). Igual que el catálogo, usa ``verify=False`` por la cadena TLS
+    incompleta del portal.
+    """
+    ses = session or requests.Session()
+    params = {
+        "cod": estacion.cod,
+        "estado": estacion.estado,
+        "tipo_esta": estacion.tipo,
+        "cate": estacion.categoria,
+        "cod_old": estacion.cod_old,
+    }
+    resp = ses.get(
+        URL_SERIE,
+        params=params,
+        headers={"User-Agent": USER_AGENT},
+        timeout=TIMEOUT,
+        verify=False,
+    )
     resp.raise_for_status()
     return resp.text
 

@@ -181,10 +181,54 @@ def _osinergmin_ok() -> pd.DataFrame:
     )
 
 
+def _clima_ok() -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "fecha_captura": ["2026-08-14", "2026-08-14"],
+            "cod_estacion": ["105053", "105056"],
+            "precip_mm": ["0.0", "3.2"],
+            "temp_max_c": ["29.8", "27.5"],
+            "temp_min_c": ["15.4", "14.0"],
+        }
+    )
+
+
 class TestSuitesPorFuente:
     def test_registro_cubre_fuentes_de_carga(self):
         # Las suites deben existir para las fuentes que el cargador conoce.
-        assert {"marketplace", "sisap", "inei", "osinergmin"} <= set(SUITES)
+        assert {"marketplace", "sisap", "inei", "osinergmin", "clima"} <= set(SUITES)
+
+    def test_clima_valido_pasa(self):
+        assert validar(_clima_ok(), SUITES["clima"]).ok
+
+    def test_clima_clave_duplicada_falla(self):
+        df = _clima_ok()
+        df.loc[1, "cod_estacion"] = "105053"  # misma (fecha, estación)
+        assert not validar(df, SUITES["clima"]).ok
+
+    def test_clima_precip_negativa_falla(self):
+        df = _clima_ok()
+        df.loc[0, "precip_mm"] = "-1"
+        assert not validar(df, SUITES["clima"]).ok
+
+    def test_clima_temp_absurda_falla(self):
+        df = _clima_ok()
+        df.loc[0, "temp_max_c"] = "999"  # fuera del rango físico
+        assert not validar(df, SUITES["clima"]).ok
+
+    def test_clima_precip_extrema_es_advertencia(self):
+        df = _clima_ok()
+        df.loc[0, "precip_mm"] = "800"  # > cota absurda, pero solo advierte
+        reporte = validar(df, SUITES["clima"])
+        assert reporte.ok
+        assert reporte.advertencias
+
+    def test_clima_temp_nula_permitida(self):
+        # Estaciones pluviométricas no miden temperatura: null no debe fallar.
+        df = _clima_ok()
+        df.loc[0, "temp_max_c"] = ""
+        df.loc[0, "temp_min_c"] = ""
+        assert validar(df, SUITES["clima"]).ok
 
     def test_sisap_valido_pasa(self):
         assert validar(_sisap_ok(), SUITES["sisap"]).ok

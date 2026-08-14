@@ -7,8 +7,9 @@ hábil sí lo son.
 
 from dataclasses import fields
 
-from observatorio.carga.r2_a_supabase import FUENTES, _esperada_dia_habil
+from observatorio.carga.r2_a_supabase import FUENTES, FUENTES_DIARIAS, _esperada_dia_habil
 from observatorio.ingesta.osinergmin.models import PrecioCombustible
+from observatorio.ingesta.senamhi.models import MedicionClima
 
 
 class TestEsperadaDiaHabil:
@@ -44,3 +45,19 @@ class TestSpecFuentes:
         nombres_carga = [c for c, _ in FUENTES["osinergmin"]["columnas"]]
         nombres_modelo = [f.name for f in fields(PrecioCombustible)]
         assert nombres_carga == nombres_modelo
+
+    def test_clima_columnas_coinciden_con_modelo(self):
+        nombres_carga = [c for c, _ in FUENTES["clima"]["columnas"]]
+        nombres_modelo = [f.name for f in fields(MedicionClima)]
+        assert nombres_carga == nombres_modelo
+
+    def test_clima_es_fuente_diaria(self):
+        # SENAMHI publica todos los días => entra en la corrida diaria (`ambas`).
+        assert "clima" in FUENTES_DIARIAS
+
+    def test_clima_tarea_apunta_al_csv_por_fecha(self):
+        (clave, where, params), *resto = FUENTES["clima"]["tareas"]("2026-08-14")
+        assert clave == "clima/2026-08-14_senamhi.csv"
+        assert where == "fecha_captura = %s"
+        assert params == ("2026-08-14",)
+        assert resto == []
