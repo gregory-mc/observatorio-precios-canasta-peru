@@ -64,6 +64,21 @@ models:
         description: "Precio en soles por galón (> 0 por construcción)."
         tests: [not_null]
 
+  - name: stg_clima
+    description: >
+      Clima diario por estación (SENAMHI), silver. Deduplicado por
+      (fecha_captura, cod_estacion). Conserva nulls: precip 0 es válida y las
+      estaciones pluviométricas no miden temperatura.
+    columns:
+      - name: fecha_captura
+        description: "Fecha de la observación (hora Lima). Parte del grano."
+        tests: [not_null]
+      - name: cod_estacion
+        description: "Código de la estación SENAMHI. Parte del grano."
+        tests: [not_null]
+      - name: region
+        description: "Región productora asignada por el subset curado."
+
   - name: stg_ipc_inei
     description: >
       Serie mensual del IPC de Lima Metropolitana (INEI), silver. Índice de

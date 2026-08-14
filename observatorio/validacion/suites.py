@@ -110,10 +110,43 @@ SUITE_OSINERGMIN = Suite(
 )
 
 
+# Cota de sanidad para lluvia diaria: un acumulado de >500 mm/día es casi seguro
+# error de unidad/parseo (los extremos históricos en Perú rondan los ~300 mm).
+# Advertencia, no error: marca para revisión sin bloquear la carga.
+PRECIP_ABSURDA = 500.0
+
+# Rango físico de temperatura en Perú: mínimas de altiplano bajo cero y máximas de
+# costa/selva ~40 °C. Fuera de [-30, 55] °C es casi seguro basura (error de parseo).
+TEMP_MIN_FISICA = -30.0
+TEMP_MAX_FISICA = 55.0
+
+
+SUITE_CLIMA = Suite(
+    nombre="clima",
+    expectativas=[
+        ColumnasPresentes(
+            ["fecha_captura", "cod_estacion", "precip_mm", "temp_max_c", "temp_min_c"]
+        ),
+        MinFilas(1),
+        NoNulo("fecha_captura"),
+        NoNulo("cod_estacion"),
+        # Grano: una medición por estación por día.
+        ClaveUnica(["fecha_captura", "cod_estacion"]),
+        # Precipitación acumulada no negativa; tope alto solo como aviso.
+        EnRango("precip_mm", minimo=0),
+        EnRango("precip_mm", maximo=PRECIP_ABSURDA, severidad="advertencia"),
+        # Temperaturas dentro del rango físico plausible del país.
+        EnRango("temp_max_c", minimo=TEMP_MIN_FISICA, maximo=TEMP_MAX_FISICA),
+        EnRango("temp_min_c", minimo=TEMP_MIN_FISICA, maximo=TEMP_MAX_FISICA),
+    ],
+)
+
+
 # Registro central, llaveado igual que FUENTES en la carga a bronze.
 SUITES: dict[str, Suite] = {
     "marketplace": SUITE_MARKETPLACE,
     "sisap": SUITE_SISAP,
     "inei": SUITE_INEI,
     "osinergmin": SUITE_OSINERGMIN,
+    "clima": SUITE_CLIMA,
 }

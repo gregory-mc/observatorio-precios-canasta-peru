@@ -78,3 +78,40 @@ CREATE TABLE IF NOT EXISTS bronze.inei_ipc (
     var_anual      double precision,
     ingested_at    timestamptz NOT NULL DEFAULT now()
 );
+
+-- Precios de combustible de OSINERGMIN (Facilito). Una fila por
+-- establecimiento × producto × día. Carga idempotente por fecha.
+CREATE TABLE IF NOT EXISTS bronze.osinergmin_precios (
+    fecha_captura       date,
+    fuente              text,
+    departamento        text,
+    provincia           text,
+    distrito            text,
+    codigo_osi          text,
+    establecimiento     text,
+    direccion           text,
+    telefono            text,
+    producto            text,
+    producto_codigo     text,
+    precio_soles_galon  double precision,
+    ingested_at         timestamptz NOT NULL DEFAULT now()
+);
+
+-- Clima diario de SENAMHI (issue #14). Una fila por estación × día, snapshot del
+-- día. Carga idempotente por fecha → DELETE WHERE fecha_captura = :fecha; COPY.
+-- Clave natural: (fecha_captura, cod_estacion).
+CREATE TABLE IF NOT EXISTS bronze.clima_senamhi (
+    fecha_captura  date,
+    fuente         text,
+    cod_estacion   text,
+    nombre         text,
+    categoria      text,
+    estado         text,
+    latitud        double precision,
+    longitud       double precision,
+    region         text,
+    precip_mm      double precision,
+    temp_max_c     double precision,
+    temp_min_c     double precision,
+    ingested_at    timestamptz NOT NULL DEFAULT now()
+);
