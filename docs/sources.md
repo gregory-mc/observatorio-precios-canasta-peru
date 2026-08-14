@@ -1,7 +1,7 @@
 # Fuentes de datos
 
 Documentación de las fuentes que alimentan el observatorio.
-Última actualización: 2026-06-23
+Última actualización: 2026-08-14
 
 ---
 
@@ -35,6 +35,37 @@ Documentación de las fuentes que alimentan el observatorio.
 - Granularidad bronze = **un grifo × producto × día** (con `codigo_osi`, distrito, dirección). La agregación a precio por departamento/distrito es trabajo de dbt (silver).
 - Recorre los 25 departamentos × sus provincias × 3 productos ⇒ varios cientos de consultas (~25 min). Cada fallo puntual (timeout, reCAPTCHA) se registra y no aborta el run; solo se alerta si el run termina con **0 filas**.
 - Corre en el **self-hosted runner** (IP peruana, score de reCAPTCHA más confiable), igual que SISAP. Cron a las **11:00 AM hora Perú (16:00 UTC)**, **todos los días** (Facilito publica también findes/feriados).
+
+---
+
+## 🔁 Re-ejecución de fechas pasadas (backfill) — issue #21
+
+El **camino diario ya es idempotente** en todas las fuentes: cada scraper escribe a
+R2 con una clave fija por fecha (`sisap/{fecha}_..._{tipo}.csv`, `marketplace/{fecha}.csv`,
+`osinergmin/{fecha}_...csv`) y re-correr sobreescribe el mismo objeto; la carga
+R2→Supabase borra la partición de la fecha (`DELETE ... WHERE fecha_captura = %s`) y
+hace `COPY` en una sola transacción. Re-correr el mismo día **no duplica**.
+
+Distinto es **re-generar una fecha pasada**. Depende de si la fuente permite consultar
+el pasado o solo expone el precio *vivo* de hoy:
+
+| Componente | ¿Backfilleable? | Cómo | Por qué |
+|---|---|---|---|
+| **SISAP** (diario) | ✅ Sí | `python -m observatorio.ingesta.sisap.run_ingesta_sisap --fecha YYYY-MM-DD` | El endpoint publica el histórico **mes-a-la-fecha**; se puede re-consultar una fecha pasada. |
+| **SISAP histórico** | ✅ Sí (rango) | `backfill_historico.py --desde ... --hasta ...` | Herramienta dedicada al backfill masivo día-por-día (issue #16). |
+| **INEI IPC** | ✅ Sí | `run_ingesta_inei` + `carga --fuente inei` (reemplazo total) | Serie histórica completa; no depende de la fecha de corrida. |
+| **Marketplace** | ❌ No | — | Scrapea **precios vivos** de VTEX. La fuente no devuelve precios de días pasados; forzar `--fecha` solo re-etiquetaría los precios de hoy con una fecha ajena (dato incorrecto). |
+| **OSINERGMIN / Facilito** | ❌ No | — | Igual que marketplace: precios vigentes del día. Sin histórico consultable. |
+| **Carga R2→Supabase** | ✅ Sí | `carga --fecha YYYY-MM-DD` | Recarga la partición desde el CSV que ya esté en R2 para esa fecha. |
+
+**Regla práctica:** si el CSV de una fecha pasada existe en R2, la **carga** siempre puede
+reprocesarlo. Si *no* existe (el scraper falló ese día), solo SISAP e INEI pueden re-generarlo;
+para marketplace y OSINERGMIN esa fecha es un **hueco permanente por diseño** (ver alertas
+cerradas #110/#119/#122). Por eso `--fecha` vive en SISAP y en la carga, pero **no** en los
+scrapers de precio vivo: sería una promesa de backfill que la fuente no puede cumplir.
+
+> Interfaz unificada: el flag es `--fecha YYYY-MM-DD` (default = hoy en hora Lima, UTC-5),
+> consistente con la carga. Reemplaza al antiguo env var `FECHA_OVERRIDE` de SISAP.
 
 ---
 
