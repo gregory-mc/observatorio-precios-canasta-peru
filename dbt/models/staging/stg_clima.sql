@@ -1,18 +1,17 @@
--- Silver: clima diario por estación (SENAMHI), una fila por estación × día.
--- Dedup por grano (fecha_captura, cod_estacion). Conserva nulls a propósito: la
--- precipitación 0 es válida y muchas estaciones pluviométricas no miden
--- temperatura. La agregación por región/departamento y el cruce con precios se
+-- Silver: clima diario por localidad (Open-Meteo), una fila por localidad × día.
+-- Dedup por grano (fecha_captura, localidad). Conserva nulls a propósito: la
+-- precipitación 0 es válida. La agregación por región y el cruce con precios se
 -- hace en marts (gold), no acá.
 
 with source as (
-    select * from {{ source('bronze', 'clima_senamhi') }}
+    select * from {{ source('bronze', 'clima') }}
 ),
 
 deduplicado as (
     select
         *,
         row_number() over (
-            partition by fecha_captura, cod_estacion
+            partition by fecha_captura, localidad
             order by ingested_at desc
         ) as _rn
     from source
@@ -22,13 +21,10 @@ final as (
     select
         fecha_captura,
         fuente,
-        cod_estacion,
-        nullif(trim(nombre), '')    as nombre,
-        nullif(trim(categoria), '') as categoria,
-        nullif(trim(estado), '')    as estado,
+        nullif(trim(localidad), '') as localidad,
+        nullif(trim(region), '')    as region,
         latitud,
         longitud,
-        nullif(trim(region), '')    as region,
         precip_mm,
         temp_max_c,
         temp_min_c

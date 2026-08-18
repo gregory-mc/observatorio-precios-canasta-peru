@@ -171,18 +171,15 @@ COLUMNAS_OSINERGMIN = [
     ("precio_soles_galon", "float"),
 ]
 
-# SENAMHI: una fila por estación × día (clima). El orden debe coincidir con
-# dataclass MedicionClima (ingesta/senamhi/models.py).
+# Clima (Open-Meteo): una fila por localidad × día. El orden debe coincidir con
+# dataclass MedicionClima (ingesta/clima/models.py).
 COLUMNAS_CLIMA = [
     ("fecha_captura", "date"),
     ("fuente", "text"),
-    ("cod_estacion", "text"),
-    ("nombre", "text"),
-    ("categoria", "text"),
-    ("estado", "text"),
+    ("localidad", "text"),
+    ("region", "text"),
     ("latitud", "float"),
     ("longitud", "float"),
-    ("region", "text"),
     ("precip_mm", "float"),
     ("temp_max_c", "float"),
     ("temp_min_c", "float"),
@@ -229,14 +226,14 @@ FUENTES = {
             (f"osinergmin/{fecha}_osinergmin_combustibles.csv", "fecha_captura = %s", (fecha,)),
         ],
     },
-    # SENAMHI: clima diario por estación. Snapshot del día (una fila por estación),
-    # idempotente por fecha como marketplace. SENAMHI publica todos los días, así
-    # que la ausencia de archivo se espera siempre (sin predicado día-hábil).
+    # Clima (Open-Meteo): una fila por localidad × día. Snapshot del día,
+    # idempotente por fecha como marketplace. Open-Meteo entrega dato a diario,
+    # así que la ausencia de archivo se espera siempre (sin predicado día-hábil).
     "clima": {
-        "tabla": "clima_senamhi",
+        "tabla": "clima",
         "columnas": COLUMNAS_CLIMA,
         "tareas": lambda fecha: [
-            (f"clima/{fecha}_senamhi.csv", "fecha_captura = %s", (fecha,)),
+            (f"clima/{fecha}_clima.csv", "fecha_captura = %s", (fecha,)),
         ],
     },
 }

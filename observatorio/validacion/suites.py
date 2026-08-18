@@ -125,13 +125,13 @@ SUITE_CLIMA = Suite(
     nombre="clima",
     expectativas=[
         ColumnasPresentes(
-            ["fecha_captura", "cod_estacion", "precip_mm", "temp_max_c", "temp_min_c"]
+            ["fecha_captura", "localidad", "precip_mm", "temp_max_c", "temp_min_c"]
         ),
         MinFilas(1),
         NoNulo("fecha_captura"),
-        NoNulo("cod_estacion"),
-        # Grano: una medición por estación por día.
-        ClaveUnica(["fecha_captura", "cod_estacion"]),
+        NoNulo("localidad"),
+        # Grano: una medición por localidad por día.
+        ClaveUnica(["fecha_captura", "localidad"]),
         # Precipitación acumulada no negativa; tope alto solo como aviso.
         EnRango("precip_mm", minimo=0),
         EnRango("precip_mm", maximo=PRECIP_ABSURDA, severidad="advertencia"),

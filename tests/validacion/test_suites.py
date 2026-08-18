@@ -185,7 +185,7 @@ def _clima_ok() -> pd.DataFrame:
     return pd.DataFrame(
         {
             "fecha_captura": ["2026-08-14", "2026-08-14"],
-            "cod_estacion": ["105053", "105056"],
+            "localidad": ["Lima", "Ica"],
             "precip_mm": ["0.0", "3.2"],
             "temp_max_c": ["29.8", "27.5"],
             "temp_min_c": ["15.4", "14.0"],
@@ -203,7 +203,7 @@ class TestSuitesPorFuente:
 
     def test_clima_clave_duplicada_falla(self):
         df = _clima_ok()
-        df.loc[1, "cod_estacion"] = "105053"  # misma (fecha, estación)
+        df.loc[1, "localidad"] = "Lima"  # misma (fecha, localidad)
         assert not validar(df, SUITES["clima"]).ok
 
     def test_clima_precip_negativa_falla(self):

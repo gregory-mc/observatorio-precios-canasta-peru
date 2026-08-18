@@ -8,8 +8,8 @@ hábil sí lo son.
 from dataclasses import fields
 
 from observatorio.carga.r2_a_supabase import FUENTES, FUENTES_DIARIAS, _esperada_dia_habil
+from observatorio.ingesta.clima.models import MedicionClima
 from observatorio.ingesta.osinergmin.models import PrecioCombustible
-from observatorio.ingesta.senamhi.models import MedicionClima
 
 
 class TestEsperadaDiaHabil:
@@ -57,7 +57,7 @@ class TestSpecFuentes:
 
     def test_clima_tarea_apunta_al_csv_por_fecha(self):
         (clave, where, params), *resto = FUENTES["clima"]["tareas"]("2026-08-14")
-        assert clave == "clima/2026-08-14_senamhi.csv"
+        assert clave == "clima/2026-08-14_clima.csv"
         assert where == "fecha_captura = %s"
         assert params == ("2026-08-14",)
         assert resto == []

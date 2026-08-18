@@ -1,0 +1,84 @@
+# .github/workflows/ingesta-clima.yml
+name: Cron Diario - Ingesta Bronze Clima
+
+on:
+  schedule:
+    # ⏰ Diario a las 20:00 UTC (03:00 PM hora de Perú), antes de la carga a
+    # Supabase (21:00 UTC). Open-Meteo entrega dato a diario (incluso findes).
+    - cron: '00 20 * * *'
+  workflow_dispatch:
+    inputs:
+      simular_fallo:
+        description: 'Forzar fallo para probar la alerta (true/false)'
+        required: false
+        default: 'false'
+      fecha:
+        description: 'Fecha YYYY-MM-DD a capturar (vacío = hoy Perú; admite backfill corto)'
+        required: false
+        default: ''
+
+jobs:
+  ejecutar_ingesta:
+    # Open-Meteo es un servicio global (sin geo-bloqueo ni auth), así que corre en
+    # el runner estándar de GitHub — a diferencia de SISAP/OSINERGMIN (que exigen
+    # IP peruana). Solo habla con Open-Meteo (público) y R2 (Cloudflare).
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+    - name: 📥 Clonar el Repositorio
+      uses: actions/checkout@v4
+
+    - name: 🐍 Configurar Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: 🛠️ Instalar Dependencias
+      run: pip install requests boto3
+
+    - name: 🌦️ Ejecutar Script de Ingesta Diaria
+      env:
+        SIMULAR_FALLO: ${{ github.event.inputs.simular_fallo || 'false' }}
+        FECHA: ${{ github.event.inputs.fecha || '' }}
+        R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+        R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+        R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        R2_BUCKET: ${{ secrets.R2_BUCKET }}
+      run: |
+        set -euo pipefail
+        export PYTHONPATH="$GITHUB_WORKSPACE"
+        ARGS=()
+        if [ -n "$FECHA" ]; then ARGS+=(--fecha "$FECHA"); fi
+        python -m observatorio.ingesta.clima.run_ingesta_clima "${ARGS[@]}"
+
+    - name: 📦 Almacenar Snapshot como Artefacto de GitHub
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: snapshot-clima
+        path: data/bronze/clima/
+        retention-days: 3
+        if-no-files-found: ignore
+
+    - name: 🚨 Crear issue de alerta por fallo
+      if: failure()
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        FECHA_LIMA=$(date -u -d '-5 hours' +%F)
+        gh issue create \
+          --title "🚨 [Clima] Fallo de ingesta $FECHA_LIMA" \
+          --body "## Fallo detectado en ingesta de clima (Open-Meteo)
+
+        El workflow **${{ github.workflow }}** falló el $FECHA_LIMA.
+
+        **Detalles:**
+        - Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+        Posibles causas: cambio de la API de Open-Meteo o caída del servicio.
+
+        > Issue auto-creado por GitHub Actions — revisar logs del run para diagnóstico." \
+          --label "area:ingesta"
