@@ -77,6 +77,7 @@ dev = [
     "pytest>=8.0",
     "ruff>=0.5",
     "mypy>=1.10",
+    "httpx>=0.27",  # cliente de tests para FastAPI (starlette TestClient)
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -88,6 +89,17 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+
+# FastAPI usa `Query()/Depends()/etc.` en los defaults de los parámetros a
+# propósito (es el idioma del framework); no es el antipatrón que B008 detecta.
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = [
+    "fastapi.Query",
+    "fastapi.Path",
+    "fastapi.Body",
+    "fastapi.Header",
+    "fastapi.Depends",
+]
 
 [tool.mypy]
 # pandas no publica stubs en su propio paquete; sin pandas-stubs instalado,
