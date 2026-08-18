@@ -97,19 +97,16 @@ CREATE TABLE IF NOT EXISTS bronze.osinergmin_precios (
     ingested_at         timestamptz NOT NULL DEFAULT now()
 );
 
--- Clima diario de SENAMHI (issue #14). Una fila por estación × día, snapshot del
--- día. Carga idempotente por fecha → DELETE WHERE fecha_captura = :fecha; COPY.
--- Clave natural: (fecha_captura, cod_estacion).
-CREATE TABLE IF NOT EXISTS bronze.clima_senamhi (
+-- Clima diario (Open-Meteo) por localidad de región productora (issue #14). Una
+-- fila por localidad × día, snapshot del día. Carga idempotente por fecha →
+-- DELETE WHERE fecha_captura = :fecha; COPY. Clave natural: (fecha_captura, localidad).
+CREATE TABLE IF NOT EXISTS bronze.clima (
     fecha_captura  date,
     fuente         text,
-    cod_estacion   text,
-    nombre         text,
-    categoria      text,
-    estado         text,
+    localidad      text,
+    region         text,
     latitud        double precision,
     longitud       double precision,
-    region         text,
     precip_mm      double precision,
     temp_max_c     double precision,
     temp_min_c     double precision,

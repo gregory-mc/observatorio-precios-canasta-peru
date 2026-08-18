@@ -66,18 +66,17 @@ models:
 
   - name: stg_clima
     description: >
-      Clima diario por estación (SENAMHI), silver. Deduplicado por
-      (fecha_captura, cod_estacion). Conserva nulls: precip 0 es válida y las
-      estaciones pluviométricas no miden temperatura.
+      Clima diario por localidad (Open-Meteo), silver. Deduplicado por
+      (fecha_captura, localidad). Conserva nulls: la precipitación 0 es válida.
     columns:
       - name: fecha_captura
         description: "Fecha de la observación (hora Lima). Parte del grano."
         tests: [not_null]
-      - name: cod_estacion
-        description: "Código de la estación SENAMHI. Parte del grano."
+      - name: localidad
+        description: "Localidad de la región productora. Parte del grano."
         tests: [not_null]
       - name: region
-        description: "Región productora asignada por el subset curado."
+        description: "Región productora de la canasta a la que pertenece la localidad."
 
   - name: stg_ipc_inei
     description: >

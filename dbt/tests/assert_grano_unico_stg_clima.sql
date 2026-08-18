@@ -1,6 +1,6 @@
--- #14 · Unicidad de grano: stg_clima por (fecha_captura, cod_estacion) —
--- una medición × estación × día.
-select fecha_captura, cod_estacion
+-- #14 · Unicidad de grano: stg_clima por (fecha_captura, localidad) —
+-- una medición × localidad × día.
+select fecha_captura, localidad
 from {{ ref('stg_clima') }}
-group by fecha_captura, cod_estacion
+group by fecha_captura, localidad
 having count(*) > 1

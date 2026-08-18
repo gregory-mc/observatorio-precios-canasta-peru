@@ -42,19 +42,19 @@ sources:
           - name: precio_soles_galon
             description: "Precio en soles por galón."
 
-      - name: clima_senamhi
-        description: "Clima diario por estación (SENAMHI): precipitación y temp máx/mín, un CSV por día."
+      - name: clima
+        description: "Clima diario por localidad de región productora (Open-Meteo): precipitación y temp máx/mín, un CSV por día."
         columns:
           - name: fecha_captura
             description: "Fecha de la observación (hora Lima)."
-          - name: cod_estacion
-            description: "Código de la estación SENAMHI. Grano junto con fecha_captura."
+          - name: localidad
+            description: "Localidad/punto de la región productora. Grano junto con fecha_captura."
           - name: precip_mm
-            description: "Precipitación acumulada del día (mm); puede ser null."
+            description: "Precipitación acumulada del día (mm)."
           - name: temp_max_c
-            description: "Temperatura máxima (°C); null en estaciones pluviométricas."
+            description: "Temperatura máxima (°C)."
           - name: temp_min_c
-            description: "Temperatura mínima (°C); null en estaciones pluviométricas."
+            description: "Temperatura mínima (°C)."
 
       - name: inei_ipc
         description: "Serie histórica del IPC del INEI (carga one-shot, no diaria)."
