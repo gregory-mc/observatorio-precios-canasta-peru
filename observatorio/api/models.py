@@ -33,11 +33,23 @@ class CanastaItem(BaseModel):
     cantidad_kg_anual: float | None
 
 
-class RespuestaPrecios(BaseModel):
+class _Pagina(BaseModel):
+    """Sobre de paginación común a las respuestas de la API.
+
+    ``total`` es cuántas filas matchean el filtro, no cuántas trae esta página:
+    sin él, quien consume la API no puede distinguir "esto es todo" de "esta es
+    la primera de N páginas" salvo por la heurística ``count == limit``.
+    """
+
+    total: int
     count: int
+    limit: int
+    offset: int
+
+
+class RespuestaPrecios(_Pagina):
     results: list[PrecioDiario]
 
 
-class RespuestaCanasta(BaseModel):
-    count: int
+class RespuestaCanasta(_Pagina):
     results: list[CanastaItem]
