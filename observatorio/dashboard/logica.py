@@ -10,6 +10,7 @@ El índice lo construye `observatorio.validacion.canasta_vs_ipc.construir_indice
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date, timedelta
 
 from observatorio.validacion.canasta_vs_ipc import construir_indice
 
@@ -161,3 +162,71 @@ def evaluar_semaforo(
     variacion = (por_mes[mes] / por_mes[previo] - 1.0) * 100.0
     nivel = clasificar(variacion)
     return Semaforo(nivel, _ETIQUETAS[nivel], variacion, mes, previo)
+
+
+# --------------------------------------------------------------------------- #
+# Serie de evolución (#38)
+# --------------------------------------------------------------------------- #
+# Ventanas del selector: etiqueta → días hacia atrás (None = todo el histórico).
+VENTANAS: dict[str, int | None] = {
+    "Últimos 90 días": 90,
+    "Últimos 180 días": 180,
+    "Último año": 365,
+    "Todo el histórico": None,
+}
+
+# SISAP publica en días hábiles y el minorista de forma interdiaria, así que 1–4
+# días sin dato es cadencia normal, no un hueco. Por encima de esto sí lo es.
+DIAS_HUECO = 10
+
+
+def desde_ventana(etiqueta: str, hoy: date) -> date | None:
+    """Fecha de inicio de la ventana elegida (None = sin límite)."""
+    dias = VENTANAS.get(etiqueta)
+    return None if dias is None else hoy - timedelta(days=dias)
+
+
+def insertar_huecos(
+    serie: list[tuple[date, float]], *, dias_hueco: int = DIAS_HUECO
+) -> list[tuple[date, float | None]]:
+    """Corta la línea donde falta dato, en vez de cruzarlo con un segmento recto.
+
+    Un gráfico de líneas une dos puntos consecutivos aunque los separen meses: en
+    el hueco de SISAP (2026-01 a 2026-05) dibujaría una recta que parece dato
+    interpolado y no lo es. Intercalar un punto nulo hace que la línea se corte
+    ahí (plotly con `connectgaps=False`) y el hueco se vea como lo que es.
+    """
+    if not serie:
+        return []
+    ordenada = sorted(serie)
+    salida: list[tuple[date, float | None]] = [ordenada[0]]
+    for (previa, _), (actual, valor) in zip(ordenada, ordenada[1:], strict=False):
+        if (actual - previa).days > dias_hueco:
+            salida.append((previa + timedelta(days=1), None))
+        salida.append((actual, valor))
+    return salida
+
+
+@dataclass(frozen=True)
+class Prediccion:
+    """Punto pronosticado con su banda."""
+
+    fecha: date
+    valor: float
+    inferior: float
+    superior: float
+
+
+def proxima_prediccion(
+    predicciones: list[tuple[date, float, float, float]], *, hoy: date
+) -> Prediccion | None:
+    """Primer punto pronosticado que todavía está en el futuro.
+
+    Las corridas son semanales con horizonte de 14 días, así que una corrida vieja
+    trae puntos ya vencidos: mostrarlos como "lo que viene" sería engañoso.
+    """
+    futuros = sorted((f, v, inf, sup) for f, v, inf, sup in predicciones if f > hoy)
+    if not futuros:
+        return None
+    fecha, valor, inferior, superior = futuros[0]
+    return Prediccion(fecha, valor, inferior, superior)
