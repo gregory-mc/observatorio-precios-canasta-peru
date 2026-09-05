@@ -1,6 +1,6 @@
 # Estado del proyecto — snapshot
 
-> **Snapshot:** 2026-07-24 · Rama `main`
+> **Snapshot:** 2026-09-05 · Rama `main`
 > Documento **vivo** de registro del proyecto (para el equipo). Cada acción realizada
 > se anota en la **bitácora de cambios** al final (§8). Verificación de datos hecha en
 > **lectura** contra Supabase producción.
@@ -9,81 +9,81 @@
 
 ## 1. Resumen ejecutivo
 
-- **Ingesta (bronze):** ✅ en producción, automatizada y verde a diario.
-- **dbt (silver→gold de precios):** ✅ en producción y **automatizado** desde el
-  2026-07-24: `dbt.yml` corre a diario a las 22:00 UTC. Se acabó el congelamiento
-  (14 días entre el 8 y el 22 de julio; 2 días más al 24).
-- **ML (M4):** ✅ en producción y **automatizado**: `ml.yml` corre los lunes a las
-  23:00 UTC. Sirve `naive` con bandas empíricas; Prophet quedó apagado (§8).
-- **Calidad de datos:** ✅ dos correcciones el 24-jul (§8): unidad de SISAP normalizada
-  a S/kg (`equiv_kg_lt`) y validación de canasta reformulada (#102 cerrada, con rangos
-  de precio por producto). Test dbt `no_negativo` como guarda del mart de predicciones.
-- **M5 (dashboard/API) y M6 (deploy/bot):** 🔲 sin empezar.
+- **Ingesta (bronze):** ✅ en producción y verde a diario (SISAP, Marketplace,
+  OSINERGMIN, Clima). Endurecida el 2026-09-05: todos los jobs con `timeout-minutes`
+  y alertas que se deduplican y se cierran solas (§8).
+- **dbt (silver→gold de precios):** ✅ automatizado, `dbt.yml` diario. Gold al día.
+- **ML (M4):** ✅ automatizado, `ml.yml` semanal. Sirve `naive` con bandas; Prophet
+  sigue apagado y el backtest lo confirma corrida a corrida (§2).
+- **M5 (dashboard/API):** 🟡 **arrancado.** La API REST está en `main` (#43 cerrada):
+  `GET /health`, `/precios`, `/canasta` sobre gold, con paginación y orden estables.
+  Falta el dashboard Streamlit (#36–#42) y el deploy (#47).
+- **M6 (deploy/bot):** 🔲 sin empezar.
 
-Frase clave: **ya no falta código ni orquestación** — dbt y ML corren solos desde el
-2026-07-24. Lo que falta es producto: M5. El modelo estrella (Prophet) resultó peor
-que el baseline, y al remedirlo sobre 10× más series se descubrió además que
-predecía precios negativos: ver §8.
+Frase clave: **M5 dejó de ser una hoja en blanco.** El backend de producto ya existe
+y está probado contra prod; lo que falta es la cara visible (Streamlit) y sacar la
+API de `main` a un host (#47).
 
 ---
 
-## 2. Verificación en producción (Supabase, solo lectura, 2026-07-24)
+## 2. Verificación en producción (Supabase, solo lectura, 2026-09-04/05)
 
 | Objeto | Estado | Filas | Última fecha |
 |---|---|---|---|
-| `bronze.*` (sisap/marketplace/osinergmin) | ✅ | 22,028 / 454,270 / 339,840 | 2026-07-24 |
-| `gold.fct_precio_diario` | ✅ | **423,085** | 2026-07-23 |
-| `gold.fct_precio_medias_moviles` | ✅ | 423,085 | 2026-07-23 |
-| `gold.dim_fecha` | ✅ | 932 | 2026-07-23 |
-| `gold.canasta_consumo_dept` | ✅ | 150 | — |
-| `ml.predicciones_raw` | ✅ | 4,508 | corrida 2026-07-24 |
-| `ml.anomalias_raw` | ✅ | 568 | corrida 2026-07-24 |
-| `ml.backtest_metricas` | ✅ | 498 | corrida 2026-07-24 |
-| `gold.fct_predicciones` | ✅ | 224 | corrida 2026-07-24 |
-| `gold.fct_anomalias` | ✅ | 80 | corrida 2026-07-24 |
+| `bronze.sisap_precios` | ✅ | 25,527 | 2026-09-04 |
+| `bronze.marketplace_precios` | ✅ | 777,795 | 2026-09-04 |
+| `bronze.osinergmin_precios` | ✅ | 787,678 | 2026-09-04 |
+| `bronze.clima` | ✅ | 198 | 2026-09-04 |
+| `bronze.inei_ipc` | ⚠️ | 389 | último mes **2026-05** (§5) |
+| `gold.fct_precio_diario` | ✅ | **725,518** | 2026-09-04 |
+| `gold.fct_precio_medias_moviles` | ✅ | 725,518 | 2026-09-04 |
+| `gold.dim_fecha` | ✅ | 975 | 2026-09-04 |
+| `gold.canasta_consumo_dept` | ✅ | 150 | ENAHO 2023 |
+| `ml.predicciones_raw` | ✅ | 19,124 | corrida 2026-08-31 |
+| `ml.anomalias_raw` | ✅ | 3,596 | corrida 2026-08-31 |
+| `ml.backtest_metricas` | ✅ | 3,246 | corrida 2026-08-31 |
+| `gold.fct_predicciones` | ✅ | 1,148 | corrida 2026-08-31 |
+| `gold.fct_anomalias` | ✅ | 458 | corrida 2026-08-31 |
 
-Todo fresco: `dbt.yml` (diario) refrescó gold al 23-jul y `ml.yml` corrió el 24-jul
-con los precios ya normalizados a S/kg (§8). `bronze.sisap` va al 22-jul porque el
-23 fue feriado y el 24 aún no cerraba la carga al momento de la lectura — no es un
-fallo (§8).
+Gold creció de 423k a 725k filas desde el snapshot anterior: la automatización
+sostuvo el ritmo sin intervención manual durante seis semanas.
 
-> **Historia del congelamiento (resuelta).** Gold llegó a estar 14 días atrás (8→22
-> jul) porque los marts son `table` y nadie corría `dbt build`. Se refrescó a mano el
-> 22-jul, volvió a atrasarse 2 días, y desde el 24-jul el workflow `dbt.yml` lo
-> mantiene al día solo. Causa raíz cerrada.
+**El backtest sigue dándole la razón al apagado de Prophet.** Última corrida
+(2026-08-31, 156 pares por modelo):
 
-Calidad de código: **210 tests en verde** (suite completa) + dbt en verde
-(`fct_predicciones` PASS=14 con el test `no_negativo`; marts de precio PASS=23).
+| modelo | MAPE promedio |
+|---|---|
+| `naive` | **6.33** |
+| `media_movil` | 6.56 |
+| `prophet` | 9.44 |
+
+Se sirve solo `naive`: las 2,436 filas de la última corrida en `ml.predicciones_raw`
+y las 154 de `gold.fct_predicciones` son todas de ese modelo. El backtest mide los
+tres a propósito — es su función, no un residuo del modelo descartado.
+
+Calidad de código: **249 tests en verde** (suite completa; eran 210 en el snapshot
+anterior). dbt no se re-verificó en esta lectura.
 
 ---
 
 ## 3. Clasificación de issues verificadas
 
-### 🟢 Tier A — implementación 100% (código + tests). ✅ CERRADAS en GitHub (2026-07-15)
+Las tablas Tier A / Tier B del snapshot anterior ya no aplican: **todo lo que
+estaba pendiente de cierre se cerró.** #32, #33 y #35 (los entregables de M4 que
+esperaban materialización en prod) están cerradas, igual que #21, #102, #16, #20,
+#14 y #43.
 
-| Issue | Título | Entregable | Evidencia |
-|---|---|---|---|
-| #28 | Baseline naive + media móvil | código | `observatorio/ml/baseline.py` + test |
-| #29 | Notebook Prophet PoC | notebook | `notebooks/02_prophet_poc.ipynb` (279 líneas) |
-| #30 | Pipeline reusable entrenamiento | código | `run_entrenamiento.py` + `prophet_modelo.py` + test |
-| #34 | Detección anomalías >2.5σ (algoritmo) | código | `observatorio/ml/anomalias.py` + test |
-| #15 | Scraper OSINERGMIN | código + workflow | módulo `ingesta/osinergmin/` + `ingesta-osinergmin.yml` (⚠️ dato en prod no verificado en este snapshot) |
+**Abiertas hoy: 19**, y todas son backlog real, no deuda de cierre:
 
-### 🟢 Tier B — entregable YA materializado en prod (desde 2026-07-22, automatizado desde 24-jul) → listas para cerrar
+| Grupo | Issues |
+|---|---|
+| M5 — dashboard y API | #36, #37, #38, #39, #40, #41, #42, #44 |
+| M6 — deploy, bot, monitoreo | #45, #46, #47, #48, #49, #50, #51, #52, #53 |
+| Orquestación (a futuro) | #27 (Dagster vs Actions), #31 (setup Dagster, opcional) |
 
-| Issue | Título | Estado |
-|---|---|---|
-| #32 | Entrenamiento batch de todos los pares | `ml.predicciones_raw` poblada (4,508 filas); corre en `ml.yml` |
-| #33 | Backtesting walk-forward + métricas | `ml.backtest_metricas` poblada (498 filas) |
-| #35 | Tabla `fct_anomalias` **materializada** por dbt | mart materializado (80 filas) |
-
-Pendiente solo el cierre en GitHub con el comentario de evidencia (no bloquea nada).
-
-### Mapeo issue → PR (para el comentario de cierre, cuando se autorice)
-
-- ML (#28, #30, #32, #33, #34): PRs #106 / #107
-- dbt marts ML (#35): PR #108
-- OSINERGMIN (#15): PRs #83 / #97 / #98
+> **Nota sobre #27.** La decisión de hecho ya se tomó —se sigue en GitHub Actions,
+> con `dbt.yml` y `ml.yml` en producción desde el 24-jul— pero la issue sigue
+> abierta como decisión formal a futuro. Ver §7.
 
 ---
 
@@ -92,51 +92,73 @@ Pendiente solo el cierre en GitHub con el comentario de evidencia (no bloquea na
 | Hito | Estado | Nota |
 |---|---|---|
 | M1 Setup | ✅ | Repo + Supabase |
-| M2 Ingesta | ✅ | SISAP + Marketplace + INEI + OSINERGMIN en prod |
-| M3 dbt medallion | ✅ | silver + gold de precios poblados (423k filas), automatizado (`dbt.yml`) y con unidad normalizada a S/kg (§8) |
-| M4 ML | ✅ | automatizado (`ml.yml` semanal); sirve `naive` con bandas, Prophet apagado con evidencia (§8) |
-| M5 Dashboard/API | 🔲 | sin empezar (`observatorio/dashboard/` y `/api/` no existen) |
+| M2 Ingesta | ✅ | SISAP + Marketplace + INEI + OSINERGMIN + Clima en prod |
+| M3 dbt medallion | ✅ | gold poblado (725k filas), automatizado (`dbt.yml`) |
+| M4 ML | ✅ | automatizado (`ml.yml` semanal); sirve `naive`, Prophet apagado con evidencia |
+| M5 Dashboard/API | 🟡 | **API lista** (`observatorio/api/`, #43 cerrada); falta Streamlit (#36–#42) y deploy (#47) |
 | M6 Deploy/bot | 🔲 | sin empezar |
 
 ---
 
 ## 5. Gaps / pendientes estructurales
 
-1. **M5 (dashboard/API)** — el siguiente hito de producto. Ya tiene de qué alimentarse:
-   gold fresco y automatizado, predicciones y anomalías al día.
-2. **Idempotencia de scrapers (#21):** el camino diario ya es idempotente; falta
-   unificar el flag `--fecha` y un test que lo garantice de forma ejecutable.
-3. **Margen estrecho entre SISAP y `carga-supabase`** (§8): la carga corre a las 21:00
-   UTC y SISAP suele terminar ~20:30, pero ha tardado hasta 3 h 27 min. Riesgo
-   latente, todavía no materializado. Relacionado: #110 (una corrida se colgó 24 h).
+1. **Dashboard Streamlit (#36–#42)** — es lo único entre el proyecto y un producto
+   visible. Todo lo que necesita ya existe: gold fresco, canasta, predicciones,
+   anomalías y una API que las sirve.
+2. **Hueco de SISAP 2026-01 → 2026-05.** Cinco meses sin dato en `bronze.sisap_precios`
+   (hay 2025-10..12 y después recién 2026-06). El workflow `backfill-sisap.yml` ya
+   existe y lo cubre: es un `workflow_dispatch` con `desde=2026-01-01`,
+   `hasta=2026-05-31` y `dry_run=false`. **Cero código, nadie lo corrió.**
+3. **INEI/IPC congelado.** `silver.stg_ipc_inei` llega hasta **2026-05**; la última
+   ingesta fue el 2026-06-13. Cualquier contraste con el IPC trabaja con dato de
+   hace tres meses.
+4. **Deuda de la API antes del deploy (#47/#44)** — del review de #135, sin resolver
+   porque no bloquea a #36:
+   - una conexión Postgres nueva por request, sin pool y sin `connect_timeout`;
+   - la API "solo-lectura" usa `SUPABASE_DB_URL`, la credencial con permisos de
+     escritura: es una convención del código, no una restricción;
+   - `/health` no toca la base — como readiness probe reporta sano con la base caída.
+5. **Un runner apagado a mitad de job sigue sin detectarse.** Las alertas nuevas
+   cubren fallo y cancelación, pero si el runner self-hosted desaparece no corre
+   ningún step, ni con `if: always()`. Haría falta un watchdog externo (un workflow
+   programado que mire la última corrida exitosa de cada pipeline).
+6. **Margen estrecho entre SISAP y `carga-supabase`.** La carga corre a las 21:00
+   UTC y SISAP suele terminar ~20:30, pero el tope nuevo le permite estirarse hasta
+   90 min: el timeout acota el cuelgue, no el solapamiento. Si SISAP se pasa, la
+   carga del día falla con "sin archivos cargados" (ya no genera una issue nueva por
+   día, pero sigue siendo un hueco de dato). Sin materializar todavía.
+7. **ENAHO 2024/2025** — la canasta sigue con pesos de ENAHO 2023. Depende de
+   conseguir el código INEI del año nuevo; es externo al equipo.
 
-**Resueltos:**
-- ~~Unidad de SISAP mezclada (cajón/millar vs kg).~~ ✅ **2026-07-24** (§8, PR #117):
-  `fct_precio_diario` normaliza con `equiv_kg_lt`.
-- ~~Validación de canasta mal planteada (vs-IPC).~~ ✅ **#102 cerrada** (§8, PR #116):
-  solidez interna + rangos de precio por producto.
-- ~~Test dbt de "precio no negativo".~~ ✅ **2026-07-24** (§8, PR #115): guarda del mart.
-- ~~Falta workflow de transformación (dbt y ML).~~ ✅ **En producción desde el
-  2026-07-24** (§8): mergeados, corridos en verde y con `cron` habilitado.
-- ~~Correr M4 una vez para poblar `ml.*`.~~ ✅ **Hecho 2026-07-22** (§8).
-- ~~No había CI de tests (push/merge no verificaba nada).~~ ✅ **Resuelto 2026-07-15**:
-  workflow `ci.yml` corre pytest en cada PR y push a main (PR #109, mergeado). Ver §8.
+**Resueltos desde el snapshot anterior:**
+- ~~Jobs sin `timeout-minutes` (OSINERGMIN llegó a 1440 min y SISAP a 299).~~
+  ✅ **2026-09-05** (PR #143): tope por workflow.
+- ~~Alertas que no cubrían la cancelación, no se deduplicaban y no se cerraban.~~
+  ✅ **2026-09-05** (PR #143): composite action `.github/actions/alerta`.
+- ~~Corridas que se colgaban sin tope (#110, 24 h).~~ ✅ **2026-09-05** (PR #143):
+  el `timeout-minutes` las acota.
+- ~~Idempotencia de scrapers (#21).~~ ✅ **cerrada** (PR #123: `--fecha` unificado + test).
+- ~~Unidad de SISAP mezclada.~~ ✅ 2026-07-24 (PR #117).
+- ~~Validación de canasta mal planteada.~~ ✅ #102 cerrada (PR #116).
+- ~~Test dbt de "precio no negativo".~~ ✅ 2026-07-24 (PR #115).
+- ~~Falta workflow de transformación (dbt y ML).~~ ✅ 2026-07-24 (PRs #113/#114).
+- ~~Correr M4 una vez para poblar `ml.*`.~~ ✅ 2026-07-22.
+- ~~No había CI de tests.~~ ✅ 2026-07-15 (PR #109).
 
 ---
 
 ## 6. Acciones
 
-- ✅ **Cerradas en GitHub las issues Tier A** (#28, #29, #30, #34, #15) — 2026-07-15,
-  cada una con comentario apuntando a su PR/commit.
-- ✅ **CI de tests activo** (`ci.yml`, PR #109 mergeado) — pytest en cada PR y push a main.
-- ✅ **Gold refrescado** (2026-07-22, `dbt build` a mano, 49 nodos en verde) — recuperados
-  los 14 días de atraso. **No resuelve la causa**: sin workflow, se vuelve a atrasar.
-- ✅ **Pipeline de ML corrido contra producción** (2026-07-22, ver §8).
-- ✅ **Workflows `dbt.yml` y `ml.yml` en producción** (2026-07-24, PRs #113/#114): mergeados,
-  corridos en verde y con `cron` habilitado (dbt diario, ML semanal).
-- ✅ **Prophet remedido sobre 157 series** (2026-07-24): pierde en las dos fuentes; queda
-  descartado para el MVP, apagado por flag (§8).
-- ✅ **Test dbt `no_negativo`, canasta #102 y unidad de SISAP** (2026-07-24, PRs #115/#116/#117, §8).
+- ✅ **API REST mergeada** (2026-09-05, PRs #135 y #144): `observatorio/api/` con
+  `/health`, `/precios` y `/canasta`; #43 cerrada. Primer entregable de M5.
+- ✅ **Alertas y timeouts endurecidos** (2026-09-05, PR #143) — ver §8.
+- ✅ **7 issues de alerta cerradas** (#136–#142): eran ruido acumulado, todas ya
+  resueltas solas. El tablero volvió a tener señal.
+- ✅ **Docs del canasto ampliado publicadas** (2026-09-05, PR #145): un commit del
+  23-jul que había quedado sin pushear en un clon local.
+- ✅ **Workflows `dbt.yml` y `ml.yml` en producción** (2026-07-24, PRs #113/#114).
+- ✅ **Prophet remedido sobre 157 series** (2026-07-24): descartado para el MVP.
+- ✅ **CI de tests activo** (`ci.yml`, PR #109) — pytest en cada PR y push a main.
 
 ---
 
@@ -192,6 +214,82 @@ UTC, ML los lunes a las 23:00 UTC.
 
 Registro cronológico de cada acción realizada sobre el proyecto en estas sesiones
 (lo más reciente primero).
+
+### 2026-09-05 — desatasco de M5, endurecimiento de alertas y limpieza del tablero
+
+Sesión de revisión de estado que terminó en cuatro merges. El punto de partida:
+**17 días sin mergear nada** y un solo PR en vuelo, parado por falta de review.
+
+**1. API REST mergeada — M5 arranca (PRs #135 y #144).**
+`#135` llevaba 17 días abierta, con CI verde y sin conflictos, esperando review.
+Se revisó y se mergeó (`07c9a8e`); #43 quedó cerrada — había seguido abierta porque
+el PR decía "Cierra #43" y GitHub solo reconoce las keywords en inglés.
+
+Del review salieron 8 hallazgos. Los cuatro que bloqueaban el consumo desde el
+dashboard se corrigieron en `#144` (`723fb2d`), todos verificados contra prod:
+
+- **`count` era el tamaño de página, no el total** → la respuesta pasa a
+  `{total, count, limit, offset, results}`, con el total vía `COUNT(*) OVER ()`
+  en la misma query (sin segundo viaje, que hoy sería una segunda conexión).
+- **El `ORDER BY` no era un orden total** → LIMIT/OFFSET podía duplicar y saltear
+  filas. Ambos endpoints ordenan ahora por todo el grano/PK. Muerde recién con un
+  segundo departamento o un segundo año ENAHO, que es la dirección del proyecto.
+- **Comodines de ILIKE sin escapar** → `?producto=%` devolvía la tabla entera.
+  Verificado en prod: ahora devuelve 13,339 filas (las que contienen un `%`
+  literal, tipo "100% Puro") en vez de 725,518.
+- **`if anio:` descartaba `anio=0`** y devolvía todos los años → `is not None` +
+  `ge=2000, le=2100`.
+
+Los otros cuatro hallazgos son de deploy, no de uso, y quedan para #47/#44: sin
+pool ni timeouts de conexión, credencial con permisos de escritura, y `/health`
+que no toca la base. Anotados en §5.
+
+**2. Alertas y timeouts (PR #143, `b254c32`).**
+Al revisar las últimas 30 corridas de cada workflow contra la API de Actions
+aparecieron tres fallas del sistema de alertas:
+
+- **Ningún job tenía `timeout-minutes`** salvo `ml.yml`. OSINERGMIN llegó a correr
+  **1440 min (24 h)** —el cuelgue que había quedado anotado como #110— y SISAP
+  **299 min**, contra medianas de 20 y 0 min. Ahora cada workflow tiene tope.
+- **`if: failure()` no cubre `cancelled()`**, que es justo el estado en que muere un
+  job cuando se agota el timeout o el runner self-hosted desaparece. El 2026-09-01
+  SISAP murió así (`KeyboardInterrupt` dentro del `time.sleep` de reintento en
+  `run_ingesta_sisap.py:95`) y **no generó alerta**: la levantó `Carga Bronze` con
+  "sin archivos cargados", señalando la consecuencia y no la causa. Ahora el step
+  corre con `if: always()` y recibe `job.status`.
+- **Las alertas no se deduplicaban ni se cerraban**: una issue nueva por día de
+  falla, ninguna cerrada al recuperarse. Con un marcador HTML por fuente, ahora se
+  comenta en la issue abierta y se cierra sola al volver a verde.
+
+Los 8 bloques de alerta duplicados (bash en unos, PowerShell en otros) quedaron en
+una composite action única, `.github/actions/alerta` sobre `actions/github-script@v9`,
+que corre igual en el runner Windows y en `ubuntu-latest` — mismo patrón que
+`entorno-dbt`. Tasas de fallo previas: Carga Bronze 4/17, SISAP 3/13, OSINERGMIN 2/17.
+
+**3. Limpieza del tablero.** Cerradas #136–#142, las 7 issues de alerta que estaban
+abiertas sin motivo (los pipelines llevaban días en verde). Las abiertas bajaron de
+27 a 19, y las 19 son backlog real.
+
+**4. Docs rescatadas (PR #145, `ab96581`).** El commit `2f7a413` del 23-jul —el
+hallazgo de que ampliar el canasto cierra la magnitud del contraste con el IPC pero
+no el timing, más la nota de reconstruir dependientes con `dbt build --select
+fct_precio_diario+`— había quedado sin pushear en un clon local y nunca llegó a
+`main`. Rebasado y mergeado; el conflicto en `dbt/README.md` (upstream había metido
+ahí la sección "Automatización") se resolvió conservando ambos lados.
+
+**Corrección de una lectura previa.** Durante la sesión se afirmó que el pipeline de
+ML seguía publicando predicciones de Prophet peores que el baseline. Es falso:
+Prophet está apagado desde el 2026-07-24 y en prod solo se sirve `naive` (§2). El
+error vino de leer un clon local desactualizado en 10 commits, sin acceso a GitHub.
+
+**Nota operativa.** El acceso a GitHub desde el clon local estaba roto: `gh` y git
+autenticados con una cuenta sin permisos sobre el repo (404 en `fetch`). Se resolvió
+logueando la cuenta correcta y ampliando el token con el scope `workflow`, necesario
+para pushear cambios en `.github/workflows/`.
+
+**Pendiente de verificar en la próxima corrida:** que la alerta nueva se cree y se
+cierre sola en un ciclo real. Se puede forzar con `workflow_dispatch` +
+`simular_fallo=true` y después un dispatch normal.
 
 ### 2026-07-24 (3/3) — calidad de datos: test no-negativo, canasta (#102) y unidad SISAP
 
