@@ -72,6 +72,20 @@ dbt build     # construye modelos + corre sus tests
 > 2026-07-08 y el 2026-07-22 nadie lo corrió y `gold` quedó 14 días atrás mientras
 > bronze y silver (que son `view`) seguían al día. Ver `docs/estado_proyecto.md` §5.
 
+> **Tras un backfill de precios (issue #16), reconstruí también los dependientes.**
+> `fct_precio_diario` alimenta `dim_fecha` (spine de calendario derivado de su rango de
+> fechas) y `fct_precio_medias_moviles`. Si reconstruís solo el hecho
+> (`dbt build --select fct_precio_diario`), `dim_fecha` queda con el calendario viejo y el
+> test de integridad referencial `relationships_…_dim_fecha` falla (fechas huérfanas). Usá
+> el operador `+` para arrastrar los dependientes:
+>
+> ```bash
+> dbt build --select fct_precio_diario+   # el hecho + dim_fecha + medias_moviles + sus tests
+> ```
+>
+> No incluye los marts de ML (`fct_predicciones`/`fct_anomalias`): esos cuelgan de
+> `source('ml', …)`, no de `fct_precio_diario`.
+
 ## Automatización
 
 Desde el 2026-07-24 hay dos workflows que se reparten los modelos:
