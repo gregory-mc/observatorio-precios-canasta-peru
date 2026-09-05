@@ -28,6 +28,67 @@ _COLS_CANASTA = (
     "peso_canasta, gasto_total_anual, cantidad_kg_anual"
 )
 
+# Orden TOTAL en ambos endpoints: si el ORDER BY no desempata por completo,
+# Postgres puede devolver las filas empatadas en distinto orden entre la query
+# de offset=0 y la de offset=500, duplicando unas y salteando otras. Por eso el
+# orden incluye todas las columnas del grano/PK.
+#   fct_precio_diario   grano: (fecha_captura, fuente, cod_departamento, producto)
+#   canasta_consumo_dept  PK:  (anio_enaho, cod_departamento, producto)
+_ORDEN_PRECIOS = "fecha_captura DESC, fuente, producto, cod_departamento"
+_ORDEN_CANASTA = "anio_enaho DESC, cod_departamento, peso_canasta DESC, producto"
+
+# Alias de la columna con el total; se saca de las filas antes de responder.
+_TOTAL = "_total"
+
+
+def _patron_ilike(texto: str) -> str:
+    """Arma el patrón de un ILIKE tratando la entrada como texto literal.
+
+    Sin esto, ``?producto=%`` genera el patrón ``%%%`` y el filtro matchea todo
+    en vez de buscar un producto llamado ``%`` — o sea, el filtro se vuelve un
+    no-op silencioso. Igual con ``_``, que en LIKE es "un carácter cualquiera".
+    """
+    escapado = texto.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{escapado}%"
+
+
+def _pagina(
+    *,
+    cols: str,
+    tabla: str,
+    where: list[str],
+    params: list,
+    orden: str,
+    limit: int,
+    offset: int,
+) -> tuple[list[dict], int]:
+    """Devuelve (filas de la página, total que matchea el filtro).
+
+    ``COUNT(*) OVER ()`` calcula el total sobre el mismo scan que la página: no
+    hace falta una segunda query, que además hoy significaría una segunda
+    conexión (cada ``db.consultar`` abre la suya).
+    """
+    clausula = ("WHERE " + " AND ".join(where)) if where else ""
+    sql = (
+        f"SELECT {cols}, COUNT(*) OVER () AS {_TOTAL} FROM {tabla} {clausula} "
+        f"ORDER BY {orden} LIMIT %s OFFSET %s"
+    )
+    filas = db.consultar(sql, (*params, limit, offset))
+
+    if filas:
+        total = filas[0][_TOTAL]
+        for fila in filas:
+            fila.pop(_TOTAL, None)
+        return filas, total
+
+    if offset == 0:
+        return [], 0
+
+    # Página vacía por caer más allá del final: la window function no devolvió
+    # ninguna fila de donde leer el total, así que se pide aparte.
+    solo_total = db.consultar(f"SELECT COUNT(*) AS {_TOTAL} FROM {tabla} {clausula}", tuple(params))
+    return [], (solo_total[0][_TOTAL] if solo_total else 0)
+
 
 def crear_app() -> FastAPI:
     app = FastAPI(
@@ -53,8 +114,8 @@ def crear_app() -> FastAPI:
         where: list[str] = []
         params: list = []
         if producto:
-            where.append("producto ILIKE %s")
-            params.append(f"%{producto}%")
+            where.append(r"producto ILIKE %s ESCAPE '\'")
+            params.append(_patron_ilike(producto))
         if fuente:
             where.append("fuente = %s")
             params.append(fuente)
@@ -68,19 +129,24 @@ def crear_app() -> FastAPI:
             where.append("fecha_captura <= %s")
             params.append(hasta)
 
-        clausula = ("WHERE " + " AND ".join(where)) if where else ""
-        sql = (
-            f"SELECT {_COLS_PRECIOS} FROM gold.fct_precio_diario {clausula} "
-            "ORDER BY fecha_captura DESC, fuente, producto LIMIT %s OFFSET %s"
+        filas, total = _pagina(
+            cols=_COLS_PRECIOS,
+            tabla="gold.fct_precio_diario",
+            where=where,
+            params=params,
+            orden=_ORDEN_PRECIOS,
+            limit=limit,
+            offset=offset,
         )
-        filas = db.consultar(sql, (*params, limit, offset))
-        return RespuestaPrecios(count=len(filas), results=filas)
+        return RespuestaPrecios(
+            total=total, count=len(filas), limit=limit, offset=offset, results=filas
+        )
 
     @app.get("/canasta", response_model=RespuestaCanasta, tags=["canasta"])
     def canasta(
         cod_departamento: str | None = Query(None, min_length=2, max_length=2),
         producto: str | None = Query(None, description="Coincidencia parcial (ILIKE)."),
-        anio: int | None = Query(None, description="Año ENAHO de la canasta."),
+        anio: int | None = Query(None, ge=2000, le=2100, description="Año ENAHO de la canasta."),
         limit: int = Query(500, ge=1, le=5000),
         offset: int = Query(0, ge=0),
     ) -> RespuestaCanasta:
@@ -90,19 +156,26 @@ def crear_app() -> FastAPI:
             where.append("cod_departamento = %s")
             params.append(cod_departamento)
         if producto:
-            where.append("producto ILIKE %s")
-            params.append(f"%{producto}%")
-        if anio:
+            where.append(r"producto ILIKE %s ESCAPE '\'")
+            params.append(_patron_ilike(producto))
+        # `is not None` y no truthiness: con `if anio:` el año 0 saltea el filtro
+        # y devuelve TODOS los años mientras el que llama cree que filtró.
+        if anio is not None:
             where.append("anio_enaho = %s")
             params.append(anio)
 
-        clausula = ("WHERE " + " AND ".join(where)) if where else ""
-        sql = (
-            f"SELECT {_COLS_CANASTA} FROM gold.canasta_consumo_dept {clausula} "
-            "ORDER BY cod_departamento, peso_canasta DESC LIMIT %s OFFSET %s"
+        filas, total = _pagina(
+            cols=_COLS_CANASTA,
+            tabla="gold.canasta_consumo_dept",
+            where=where,
+            params=params,
+            orden=_ORDEN_CANASTA,
+            limit=limit,
+            offset=offset,
         )
-        filas = db.consultar(sql, (*params, limit, offset))
-        return RespuestaCanasta(count=len(filas), results=filas)
+        return RespuestaCanasta(
+            total=total, count=len(filas), limit=limit, offset=offset, results=filas
+        )
 
     return app
 
