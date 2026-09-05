@@ -33,11 +33,11 @@ jobs:
           cache-dependency-path: pyproject.toml
 
       # Se instala solo lo que los tests importan de verdad: el paquete (pandas,
-      # psycopg, dotenv) + ingesta + carga + dev. Se OMITE el grupo `ml` a propósito:
-      # los módulos de ML solo importan pandas al top-level y Prophet se monkeypatchea
-      # en los tests, así que instalar Prophet (pesado, baja cmdstan) sería inútil.
+      # psycopg, dotenv) + ingesta + carga + api + dev. Se OMITE el grupo `ml` a
+      # propósito: los módulos de ML solo importan pandas al top-level y Prophet se
+      # monkeypatchea en los tests, así que instalar Prophet (pesado) sería inútil.
       - name: Instalar dependencias
-        run: pip install -e ".[ingesta,carga,dev]"
+        run: pip install -e ".[ingesta,carga,api,dev]"
 
       - name: Ejecutar pytest
         run: pytest -q
