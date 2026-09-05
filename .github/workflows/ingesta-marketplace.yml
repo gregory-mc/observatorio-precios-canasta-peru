@@ -13,6 +13,7 @@ on:
 jobs:
   scrape:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       issues: write
@@ -66,20 +67,15 @@ jobs:
 
       # TODO(S2): cargar el CSV a Supabase Postgres (schema bronze).
 
-      - name: 🚨 Crear issue de alerta por fallo
-        if: failure()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh issue create \
-            --title "🚨 [Marketplace] Fallo de ingesta $(date -u -d '-5 hours' +%Y-%m-%d)" \
-            --body "## Fallo detectado en ingesta Marketplace
-
-          El workflow **${{ github.workflow }}** falló el $(date -u -d '-5 hours' +%F).
-
-          **Detalles:**
-          - Runner: \`${{ runner.name }}\`
-          - Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-          > Issue auto-creado por GitHub Actions — revisar logs del run para diagnóstico." \
-            --label "area:devops"
+      - name: 🚨 Alerta (abre / comenta / cierra sola)
+        # Corre siempre para poder CERRAR la alerta cuando el pipeline vuelve
+        # a verde, y para alertar también cuando el job es cancelado (timeout o
+        # runner self-hosted caído), caso que `if: failure()` no cubría.
+        if: always()
+        uses: ./.github/actions/alerta
+        with:
+          fuente: Marketplace
+          resumen: Fallo de ingesta
+          etiqueta: area:devops
+          resultado: ${{ job.status }}
+          token: ${{ secrets.GITHUB_TOKEN }}

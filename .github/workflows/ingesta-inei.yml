@@ -18,6 +18,7 @@ jobs:
     # unreachable" (Errno 101). Corre en el self-hosted con IP peruana — el mismo
     # runner Windows que usa SISAP.
     runs-on: self-hosted
+    timeout-minutes: 30
     permissions:
       contents: read
       issues: write
@@ -73,26 +74,15 @@ jobs:
           $env:PYTHONPATH = "${{ github.workspace }}"
           python -m observatorio.carga.r2_a_supabase --fuente inei
 
-      - name: 🚨 Crear issue de alerta por fallo
-        if: failure()
-        shell: powershell
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          $fechaLima = (Get-Date).ToUniversalTime().AddHours(-5).ToString("yyyy-MM-dd")
-          $titulo = "ALERTA [INEI IPC] Fallo de ingesta historica $fechaLima"
-          $runUrl = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          $lineas = @(
-            "## Fallo detectado en la ingesta historica del IPC (INEI)",
-            "",
-            "El workflow **${{ github.workflow }}** fallo el $fechaLima.",
-            "",
-            "**Detalles:**",
-            "- Runner: ${{ runner.name }}",
-            "- Run: $runUrl",
-            "",
-            "> Issue auto-creado por GitHub Actions - revisar logs del run para diagnostico."
-          )
-          $bodyFile = Join-Path $env:RUNNER_TEMP "alerta_inei.txt"
-          $lineas | Out-File -FilePath $bodyFile -Encoding utf8
-          gh issue create --title $titulo --body-file $bodyFile --label "area:devops"
+      - name: 🚨 Alerta (abre / comenta / cierra sola)
+        # Corre siempre para poder CERRAR la alerta cuando el pipeline vuelve
+        # a verde, y para alertar también cuando el job es cancelado (timeout o
+        # runner self-hosted caído), caso que `if: failure()` no cubría.
+        if: always()
+        uses: ./.github/actions/alerta
+        with:
+          fuente: INEI IPC
+          resumen: Fallo de ingesta histórica
+          etiqueta: area:devops
+          resultado: ${{ job.status }}
+          token: ${{ secrets.GITHUB_TOKEN }}

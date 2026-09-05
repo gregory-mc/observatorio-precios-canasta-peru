@@ -23,6 +23,7 @@ jobs:
     # el runner estándar. Los tests que tocan conexión real (tests/conexion,
     # tests/ingesta/sisap) ya están excluidos vía addopts en pyproject.toml.
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
 
