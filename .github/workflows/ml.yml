@@ -100,22 +100,17 @@ jobs:
         working-directory: dbt
         run: dbt build --select fct_predicciones fct_anomalias
 
-      - name: 🚨 Crear issue de alerta por fallo
-        if: failure()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh issue create \
-            --title "🚨 [ML] Fallo del pipeline de predicciones $(date -u -d '-5 hours' +%Y-%m-%d)" \
-            --body "## Fallo en el pipeline de ML
-
-          El workflow **${{ github.workflow }}** falló el $(date -u -d '-5 hours' +%F).
-
-          Si el mensaje menciona pérdida de series (\`cobertura.py\`), el batch
-          abortó **sin escribir**: las tablas \`ml.*\` conservan la corrida anterior.
-
-          **Detalles:**
-          - Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-          > Issue auto-creado por GitHub Actions — revisar logs del run para diagnóstico." \
-            --label "area:ml"
+      - name: 🚨 Alerta (abre / comenta / cierra sola)
+        # Corre siempre para poder CERRAR la alerta cuando el pipeline vuelve
+        # a verde, y para alertar también cuando el job es cancelado (timeout o
+        # runner self-hosted caído), caso que `if: failure()` no cubría.
+        if: always()
+        uses: ./.github/actions/alerta
+        with:
+          fuente: ML
+          resumen: Fallo del pipeline de predicciones
+          etiqueta: area:ml
+          resultado: ${{ job.status }}
+          causas: >-
+            si el mensaje menciona pérdida de series (`cobertura.py`), el batch abortó **sin escribir**: las tablas `ml.*` conservan la corrida anterior.
+          token: ${{ secrets.GITHUB_TOKEN }}

@@ -23,6 +23,7 @@ jobs:
     # el runner estándar de GitHub — a diferencia de SISAP/OSINERGMIN (que exigen
     # IP peruana). Solo habla con Open-Meteo (público) y R2 (Cloudflare).
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
       issues: write
@@ -63,22 +64,17 @@ jobs:
         retention-days: 3
         if-no-files-found: ignore
 
-    - name: 🚨 Crear issue de alerta por fallo
-      if: failure()
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        FECHA_LIMA=$(date -u -d '-5 hours' +%F)
-        gh issue create \
-          --title "🚨 [Clima] Fallo de ingesta $FECHA_LIMA" \
-          --body "## Fallo detectado en ingesta de clima (Open-Meteo)
-
-        El workflow **${{ github.workflow }}** falló el $FECHA_LIMA.
-
-        **Detalles:**
-        - Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-        Posibles causas: cambio de la API de Open-Meteo o caída del servicio.
-
-        > Issue auto-creado por GitHub Actions — revisar logs del run para diagnóstico." \
-          --label "area:ingesta"
+    - name: 🚨 Alerta (abre / comenta / cierra sola)
+      # Corre siempre para poder CERRAR la alerta cuando el pipeline vuelve
+      # a verde, y para alertar también cuando el job es cancelado (timeout o
+      # runner self-hosted caído), caso que `if: failure()` no cubría.
+      if: always()
+      uses: ./.github/actions/alerta
+      with:
+        fuente: Clima
+        resumen: Fallo de ingesta
+        etiqueta: area:ingesta
+        resultado: ${{ job.status }}
+        causas: >-
+          cambio de la API de Open-Meteo o caída del servicio.
+        token: ${{ secrets.GITHUB_TOKEN }}

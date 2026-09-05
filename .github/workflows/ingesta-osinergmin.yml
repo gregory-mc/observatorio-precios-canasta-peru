@@ -24,6 +24,7 @@ jobs:
     # desde una IP residencial, y es un job largo (~25 min) mejor en el runner
     # dedicado. Es el mismo runner que SISAP.
     runs-on: self-hosted
+    timeout-minutes: 60
     permissions:
       contents: read
       issues: write
@@ -71,28 +72,17 @@ jobs:
         retention-days: 3
         if-no-files-found: ignore
 
-    - name: 🚨 Crear issue de alerta por fallo
-      if: failure()
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      shell: powershell
-      run: |
-        $fechaLima = (Get-Date).ToUniversalTime().AddHours(-5).ToString("yyyy-MM-dd")
-        $titulo = "ALERTA [OSINERGMIN] Fallo de ingesta $fechaLima"
-        $runUrl = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-        $lineas = @(
-          "## Fallo detectado en ingesta OSINERGMIN (Facilito)",
-          "",
-          "El workflow **${{ github.workflow }}** fallo el $fechaLima.",
-          "",
-          "**Detalles:**",
-          "- Runner: ${{ runner.name }}",
-          "- Run: $runUrl",
-          "",
-          "Posibles causas: reCAPTCHA rechazado (score bajo), cambio del HTML/flujo de Facilito, o caida de la fuente.",
-          "",
-          "> Issue auto-creado por GitHub Actions - revisar logs del run para diagnostico."
-        )
-        $bodyFile = Join-Path $env:RUNNER_TEMP "alerta_osinergmin.txt"
-        $lineas | Out-File -FilePath $bodyFile -Encoding utf8
-        gh issue create --title $titulo --body-file $bodyFile --label "area:ingesta"
+    - name: 🚨 Alerta (abre / comenta / cierra sola)
+      # Corre siempre para poder CERRAR la alerta cuando el pipeline vuelve
+      # a verde, y para alertar también cuando el job es cancelado (timeout o
+      # runner self-hosted caído), caso que `if: failure()` no cubría.
+      if: always()
+      uses: ./.github/actions/alerta
+      with:
+        fuente: OSINERGMIN
+        resumen: Fallo de ingesta
+        etiqueta: area:ingesta
+        resultado: ${{ job.status }}
+        causas: >-
+          reCAPTCHA rechazado (score bajo), cambio del HTML/flujo de Facilito, o caída de la fuente.
+        token: ${{ secrets.GITHUB_TOKEN }}

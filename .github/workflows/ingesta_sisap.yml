@@ -19,6 +19,7 @@ on:
 jobs:
   ejecutar_ingesta:
     runs-on: self-hosted
+    timeout-minutes: 90
     permissions:
       contents: read
       issues: write
@@ -62,26 +63,17 @@ jobs:
         path: observatorio/ingesta/sisap/output_bronze_sisap/
         retention-days: 3
 
-    - name: 🚨 Crear issue de alerta por fallo
-      if: failure()
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      shell: powershell
-      run: |
-        $fechaLima = (Get-Date).ToUniversalTime().AddHours(-5).ToString("yyyy-MM-dd")
-        $titulo = "ALERTA [SISAP] Fallo de ingesta $fechaLima"
-        $runUrl = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-        $lineas = @(
-          "## Fallo detectado en ingesta SISAP",
-          "",
-          "El workflow **${{ github.workflow }}** fallo el $fechaLima.",
-          "",
-          "**Detalles:**",
-          "- Runner: ${{ runner.name }}",
-          "- Run: $runUrl",
-          "",
-          "> Issue auto-creado por GitHub Actions - revisar logs del run para diagnostico."
-        )
-        $bodyFile = Join-Path $env:RUNNER_TEMP "alerta_sisap.txt"
-        $lineas | Out-File -FilePath $bodyFile -Encoding utf8
-        gh issue create --title $titulo --body-file $bodyFile --label "area:devops"
+    - name: 🚨 Alerta (abre / comenta / cierra sola)
+      # Corre siempre para poder CERRAR la alerta cuando el pipeline vuelve
+      # a verde, y para alertar también cuando el job es cancelado (timeout o
+      # runner self-hosted caído), caso que `if: failure()` no cubría.
+      if: always()
+      uses: ./.github/actions/alerta
+      with:
+        fuente: SISAP
+        resumen: Fallo de ingesta
+        etiqueta: area:devops
+        resultado: ${{ job.status }}
+        causas: >-
+          MIDAGRI publica con retraso (tabla vacía tras los reintentos), cambio del HTML de SISAP, o caída de la fuente.
+        token: ${{ secrets.GITHUB_TOKEN }}

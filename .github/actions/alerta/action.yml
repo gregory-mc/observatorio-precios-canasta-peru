@@ -1,0 +1,117 @@
+name: Alerta de pipeline
+description: >
+  Abre una issue de alerta cuando el workflow falla o es cancelado, comenta en la
+  que ya esté abierta en vez de crear una nueva, y la cierra sola cuando el
+  workflow vuelve a verde.
+
+inputs:
+  fuente:
+    description: 'Clave estable del pipeline (SISAP, OSINERGMIN, Clima...). Identifica la issue entre corridas.'
+    required: true
+  resumen:
+    description: 'Qué falló, en una línea y sin fecha. Es el título de la issue.'
+    required: true
+  etiqueta:
+    description: 'Label a aplicar (area:ingesta, area:devops, area:datos, area:ml).'
+    required: true
+  resultado:
+    description: 'Resultado del job. Pasar siempre ${{ job.status }}.'
+    required: true
+  causas:
+    description: 'Causas probables, opcional. Se incluye en el cuerpo de la issue.'
+    required: false
+    default: ''
+  token:
+    description: 'GITHUB_TOKEN con permiso issues:write.'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/github-script@v9
+      env:
+        FUENTE: ${{ inputs.fuente }}
+        RESUMEN: ${{ inputs.resumen }}
+        ETIQUETA: ${{ inputs.etiqueta }}
+        RESULTADO: ${{ inputs.resultado }}
+        CAUSAS: ${{ inputs.causas }}
+        RUNNER_NOMBRE: ${{ runner.name }}
+      with:
+        github-token: ${{ inputs.token }}
+        script: |
+          const { FUENTE, RESUMEN, ETIQUETA, RESULTADO, CAUSAS, RUNNER_NOMBRE } = process.env;
+
+          // Marcador invisible: es lo que hace que una alerta sea "la misma" entre
+          // corridas. No se busca por título, que lleva fecha y cambia.
+          const marcador = `<!-- alerta-pipeline: ${FUENTE} -->`;
+          const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+          const fechaLima = new Date(Date.now() - 5 * 3600 * 1000).toISOString().slice(0, 10);
+
+          const abiertas = (await github.paginate(github.rest.issues.listForRepo, {
+            ...context.repo,
+            state: 'open',
+            labels: ETIQUETA,
+            per_page: 100,
+          })).filter((i) => !i.pull_request && (i.body || '').includes(marcador));
+
+          if (RESULTADO === 'success') {
+            // Nada que hacer si no había alerta abierta: el caso normal.
+            for (const issue of abiertas) {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: issue.number,
+                body: `✅ **${context.workflow}** volvió a verde el ${fechaLima}.\n\nRun: ${runUrl}\n\n> Cerrada automáticamente al recuperarse el pipeline.`,
+              });
+              await github.rest.issues.update({ ...context.repo, issue_number: issue.number, state: 'closed', state_reason: 'completed' });
+              core.info(`Cerrada #${issue.number} (${FUENTE} se recuperó)`);
+            }
+            return;
+          }
+
+          const cancelado = RESULTADO === 'cancelled';
+          const queHizo = cancelado ? 'fue **cancelado**' : 'falló';
+          const notaCancel = cancelado
+            ? '\n\n⚠️ El job fue cancelado, no falló por su cuenta: se agotó el `timeout-minutes` o el runner self-hosted desapareció (PC apagada, suspendida o servicio reiniciado).'
+            : '';
+
+          const detalle = [
+            `- Resultado: \`${RESULTADO}\``,
+            `- Runner: \`${RUNNER_NOMBRE}\``,
+            `- Run: ${runUrl}`,
+          ].join('\n');
+
+          if (abiertas.length > 0) {
+            // Ya hay una alerta abierta para esta fuente: se acumula como comentario
+            // en vez de abrir una issue nueva por día.
+            const issue = abiertas[0];
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: issue.number,
+              body: `🔁 **${context.workflow}** ${queHizo} otra vez el ${fechaLima}.\n\n${detalle}${notaCancel}`,
+            });
+            core.warning(`${FUENTE} sigue en falla — comentado en #${issue.number} (sin abrir issue nueva)`);
+            return;
+          }
+
+          const cuerpo = [
+            marcador,
+            `## ${RESUMEN}`,
+            '',
+            `El workflow **${context.workflow}** ${queHizo} el ${fechaLima}.`,
+            '',
+            '**Detalles:**',
+            detalle,
+            notaCancel,
+            '',
+            CAUSAS ? `**Causas probables:** ${CAUSAS}\n` : '',
+            '> Issue auto-creada por GitHub Actions. Se cierra sola cuando el workflow vuelva a verde;',
+            '> mientras siga fallando se acumulan comentarios acá en vez de abrirse issues nuevas.',
+          ].filter((l) => l !== '').join('\n');
+
+          const { data: creada } = await github.rest.issues.create({
+            ...context.repo,
+            title: `🚨 [${FUENTE}] ${RESUMEN} (${fechaLima})`,
+            body: cuerpo,
+            labels: [ETIQUETA],
+          });
+          core.warning(`Alerta abierta: #${creada.number}`);

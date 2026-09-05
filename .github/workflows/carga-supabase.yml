@@ -25,6 +25,7 @@ jobs:
     # Solo habla con R2 (Cloudflare) y Supabase, ambos públicos: no aplica el
     # geo-bloqueo del MIDAGRI, así que corre en el runner estándar de GitHub.
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
       issues: write
@@ -60,20 +61,17 @@ jobs:
           if [ -n "$FECHA" ]; then ARGS+=(--fecha "$FECHA"); fi
           python -m observatorio.carga.r2_a_supabase "${ARGS[@]}"
 
-      - name: 🚨 Crear issue de alerta por fallo
-        if: failure()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh issue create \
-            --title "🚨 [Carga Bronze] Fallo de carga R2→Supabase $(date -u -d '-5 hours' +%Y-%m-%d)" \
-            --body "## Fallo detectado en la carga a Supabase
-
-          El workflow **${{ github.workflow }}** falló el $(date -u -d '-5 hours' +%F).
-
-          **Detalles:**
-          - Runner: \`${{ runner.name }}\`
-          - Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-          > Issue auto-creado por GitHub Actions — revisar logs del run para diagnóstico." \
-            --label "area:devops"
+      - name: 🚨 Alerta (abre / comenta / cierra sola)
+        # Corre siempre para poder CERRAR la alerta cuando el pipeline vuelve
+        # a verde, y para alertar también cuando el job es cancelado (timeout o
+        # runner self-hosted caído), caso que `if: failure()` no cubría.
+        if: always()
+        uses: ./.github/actions/alerta
+        with:
+          fuente: Carga Bronze
+          resumen: Fallo de carga R2→Supabase
+          etiqueta: area:devops
+          resultado: ${{ job.status }}
+          causas: >-
+            si el mensaje dice «sin archivos cargados», el fallo es aguas arriba: el scraper de esa fuente no dejó el CSV en R2. Revisar primero la alerta de la fuente.
+          token: ${{ secrets.GITHUB_TOKEN }}
