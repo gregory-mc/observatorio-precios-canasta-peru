@@ -261,3 +261,58 @@ def anomalias(fuente: str, slug: str, desde: str | None) -> list[tuple]:
             [fuente, slug, *corte_param],
         )
         return [(f, float(p), float(e), float(z)) for f, p, e, z in cur.fetchall()]
+
+
+# --------------------------------------------------------------------------- #
+# Mapa por departamento (#39)
+# --------------------------------------------------------------------------- #
+# Los límites departamentales se traen en runtime y NO se vendorean: el archivo
+# está bajo MPL-2.0 y este repo es MIT, así que distribuirlo arrastraría la
+# obligación de licencia por un mapa que el PLAN marca como recortable. Trae
+# `FIRST_IDDP`, que es el mismo código de departamento que usa la canasta, así
+# que el join no depende de matchear nombres.
+GEOJSON_URL = (
+    "https://raw.githubusercontent.com/juaneladio/peru-geojson/master/"
+    "peru_departamental_simple.geojson"
+)
+GEOJSON_CLAVE = "properties.FIRST_IDDP"
+GEOJSON_ATRIBUCION = (
+    "Límites: [juaneladio/peru-geojson]"
+    "(https://github.com/juaneladio/peru-geojson) (MPL-2.0)"
+)
+
+
+@st.cache_data(ttl=_TTL)
+def pesos_por_departamento() -> dict[str, dict[str, float]]:
+    """{cod_departamento → {slug → peso}} del año ENAHO más reciente."""
+    load_dotenv()
+    with conectar() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            select cod_departamento, producto, peso_canasta
+            from gold.canasta_consumo_dept
+            where anio_enaho = (select max(anio_enaho) from gold.canasta_consumo_dept)
+            """
+        )
+        salida: dict[str, dict[str, float]] = {}
+        for cod, producto, peso in cur.fetchall():
+            salida.setdefault(cod, {})[producto] = float(peso)
+    return salida
+
+
+@st.cache_data(ttl=86400, show_spinner="Cargando límites departamentales…")
+def geojson_departamentos() -> dict | None:
+    """Límites de los 25 departamentos, o None si la descarga falla.
+
+    Devolver None en vez de propagar el error permite que la página degrade a una
+    tabla ordenada — que es lo que el PLAN sugiere como sustituto del mapa — en
+    lugar de quedar rota por una dependencia externa.
+    """
+    import json
+    import urllib.request
+
+    try:
+        with urllib.request.urlopen(GEOJSON_URL, timeout=20) as respuesta:
+            return json.loads(respuesta.read())
+    except Exception:  # noqa: BLE001 — cualquier fallo de red/parseo degrada a tabla
+        return None

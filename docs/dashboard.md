@@ -128,7 +128,49 @@ minorista de forma interdiaria, así que 1–4 días sin dato es cadencia normal
 
 ---
 
-## 5. Riesgo latente: dos definiciones del slug MVP
+## 5. Mapa por departamento (#39)
+
+Coroplético de los 25 departamentos con dos modos:
+
+| Modo | Qué pinta | Naturaleza del dato |
+|---|---|---|
+| Variación mensual de la canasta | El semáforo de §2 aplicado a cada departamento | Mixto: precios comunes × pesos locales |
+| Peso de un producto en la canasta | Qué % del gasto en frescos es papa, pollo… | **Dato departamental puro** (ENAHO) |
+
+**El primer modo lleva un aviso grande y deliberado.** Como solo Lima tiene
+precios propios, los 25 departamentos se valorizan con los mismos precios: el
+mapa muestra **estructura de consumo, no diferencias de precio**. Un
+departamento se pinta más rojo porque consume más del producto que subió, no
+porque ahí esté más caro. El segundo modo no tiene esa ambigüedad y por eso
+existe: es ENAHO puro, sin precios de por medio.
+
+Cuando SISAP cubra más departamentos, el primer modo pasa a ser un mapa de
+precios de verdad sin tocar el código — `resolver_ambito` y
+`semaforo_por_departamento` ya trabajan por departamento.
+
+### Los límites geográficos no se vendorean
+
+Se descargan en runtime de [juaneladio/peru-geojson](https://github.com/juaneladio/peru-geojson)
+y se cachean 24 h. **Por licencia**: el archivo está bajo MPL-2.0 y este repo es
+MIT, así que distribuirlo arrastraría la obligación de licencia por un mapa que
+el PLAN marca como recortable.
+
+Dos cosas que lo hacen seguro:
+
+- **El join es por código, no por nombre.** El GeoJSON trae `FIRST_IDDP`, que es
+  el mismo `cod_departamento` de la canasta. Verificado: los 25 códigos empatan
+  exactamente, sin huérfanos de ningún lado. Matchear por nombre habría fallado
+  con `Áncash`/`ANCASH` y `Apurímac`/`APURIMAC`.
+- **Si la descarga falla, la página degrada a tabla** (`geojson_departamentos()`
+  devuelve None en vez de propagar) — que es justo el sustituto que sugiere el
+  PLAN. Verificado simulando el fallo: muestra el aviso y las 25 filas.
+
+Se usa `plotly.express.choropleth` con `fitbounds="locations"`, que es el
+renderer geo nativo: **no** hace falta un token de mapbox ni un tile server.
+
+---
+
+## 6. Riesgo latente: dos definiciones del slug MVP
 
 La reducción de nombre crudo → slug del MVP está escrita **dos veces**:
 
