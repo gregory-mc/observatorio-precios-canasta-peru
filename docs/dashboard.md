@@ -100,3 +100,49 @@ departamentos esto se corrige solo, sin tocar el dashboard.
 
 Es también la razón por la que el mapa coroplético (#39) hoy pintaría 24
 departamentos con el mismo precio — está anotado en el stub de esa página.
+
+---
+
+## 4. Evolución temporal (#38)
+
+Serie diaria de un producto con la banda de pronóstico y las anomalías, sobre
+`gold.fct_predicciones` y `gold.fct_anomalias`.
+
+- **Solo SISAP tiene pronóstico**: el batch de ML corre sobre `sisap_minorista`
+  (6 productos) y `sisap_mayorista` (5 — no cotiza pollo).
+- **Las corridas son semanales, con horizonte de 14 días.** Una corrida ya
+  vencida trae puntos pasados, así que `proxima_prediccion()` muestra el primer
+  punto que todavía está en el futuro, y si no queda ninguno lo dice en vez de
+  presentar un pronóstico viejo como si fuera lo que viene.
+- **El modelo es `naive` con bandas empíricas**, no Prophet ni intervalos
+  bayesianos. Está escrito en la página para que nadie lea las bandas como más de
+  lo que son.
+
+### La línea se corta en los huecos
+
+Un gráfico de líneas une dos puntos consecutivos aunque los separen meses: en el
+hueco de SISAP (2026-01 → 2026-05) dibujaría una recta de cinco meses que parece
+dato interpolado. `insertar_huecos()` intercala un punto nulo y plotly corta ahí
+(`connectgaps=False`). El umbral es 10 días: SISAP publica en días hábiles y el
+minorista de forma interdiaria, así que 1–4 días sin dato es cadencia normal.
+
+---
+
+## 5. Riesgo latente: dos definiciones del slug MVP
+
+La reducción de nombre crudo → slug del MVP está escrita **dos veces**:
+
+| Dónde | Qué usa |
+|---|---|
+| `validacion/canasta_vs_ipc.py::MAPEO_PRECIO_MVP` | Patrones ILIKE en Python. Lo usa la validación y el dashboard para la serie observada |
+| `dbt/macros/slug_producto_mvp.sql` | `CASE` en SQL. Lo usan `fct_predicciones` y `fct_anomalias` |
+
+**Hoy coinciden exactamente**: verificado sobre el catálogo real de SISAP, 0
+productos con slug distinto entre las dos. Pero no coinciden por construcción —
+el macro excluye `'papa seca%'` y matchea `'%pollo%'`, mientras que el de Python
+usa `'Papa %'` y `'Carne de pollo%'`. Si SISAP suma una variedad nueva, pueden
+divergir y la página de evolución superpondría una serie observada contra una
+banda calculada sobre un conjunto de productos distinto.
+
+Vale unificarlas cuando se toque esa zona; no es urgente mientras el catálogo no
+cambie.

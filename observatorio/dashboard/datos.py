@@ -168,3 +168,96 @@ def tiene_precios_nacionales(fuente: str) -> bool:
             [fuente],
         )
         return bool(cur.fetchone()[0])
+
+
+# --------------------------------------------------------------------------- #
+# Evolución temporal (#38)
+# --------------------------------------------------------------------------- #
+# `fct_predicciones` y `fct_anomalias` ya vienen reducidas al slug MVP por el
+# macro dbt `slug_producto_mvp`, así que acá no hace falta mapear: se filtra por
+# `producto` directo. Para la serie observada, que sale de `fct_precio_diario`
+# (nombres crudos), se sigue usando el CASE de `validacion`.
+
+
+@st.cache_data(ttl=_TTL)
+def productos_con_prediccion(fuente: str) -> list[str]:
+    """Slugs con pronóstico en la última corrida de esa fuente."""
+    load_dotenv()
+    with conectar() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            select distinct producto from gold.fct_predicciones
+            where fuente = %s
+              and fecha_corrida = (select max(fecha_corrida) from gold.fct_predicciones)
+            order by producto
+            """,
+            [fuente],
+        )
+        return [p for (p,) in cur.fetchall()]
+
+
+@st.cache_data(ttl=_TTL, show_spinner="Cargando serie…")
+def serie_precio(fuente: str, ambito: str, slug: str, desde: str | None) -> list[tuple]:
+    """[(fecha, precio promedio del día)] de un producto MVP."""
+    load_dotenv()
+    filtro, extra = _filtro_ambito(ambito)
+    corte = "and fecha_captura >= %s" if desde else ""
+    corte_param = [desde] if desde else []
+    with conectar() as conn, conn.cursor() as cur:
+        cur.execute(
+            f"""
+            with etiquetado as (
+                select fecha_captura, {_sql_case_slug()} as slug, precio_prom
+                from gold.fct_precio_diario
+                where fuente = %s and {filtro} and precio_prom is not null {corte}
+            )
+            select fecha_captura, avg(precio_prom)
+            from etiquetado where slug = %s
+            group by fecha_captura order by fecha_captura
+            """,
+            [*_patrones_slug(), fuente, *extra, *corte_param, slug],
+        )
+        return [(fecha, float(precio)) for fecha, precio in cur.fetchall()]
+
+
+@st.cache_data(ttl=_TTL)
+def predicciones(fuente: str, slug: str) -> tuple[list[tuple], str | None, str | None]:
+    """([(fecha, pred, inf, sup)], modelo, fecha_corrida) de la última corrida."""
+    load_dotenv()
+    with conectar() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            select fecha_pred, precio_pred, precio_pred_inf, precio_pred_sup,
+                   modelo, fecha_corrida
+            from gold.fct_predicciones
+            where fuente = %s and producto = %s
+              and fecha_corrida = (select max(fecha_corrida) from gold.fct_predicciones)
+            order by fecha_pred
+            """,
+            [fuente, slug],
+        )
+        filas = cur.fetchall()
+    if not filas:
+        return [], None, None
+    puntos = [(f, float(v), float(i), float(s)) for f, v, i, s, _, _ in filas]
+    return puntos, filas[0][4], filas[0][5].isoformat()
+
+
+@st.cache_data(ttl=_TTL)
+def anomalias(fuente: str, slug: str, desde: str | None) -> list[tuple]:
+    """[(fecha, precio observado, esperado, z)] detectadas en la última corrida."""
+    load_dotenv()
+    corte = "and fecha >= %s" if desde else ""
+    corte_param = [desde] if desde else []
+    with conectar() as conn, conn.cursor() as cur:
+        cur.execute(
+            f"""
+            select fecha, precio_prom, esperado_prom, z_abs_max
+            from gold.fct_anomalias
+            where fuente = %s and producto = %s {corte}
+              and fecha_corrida = (select max(fecha_corrida) from gold.fct_anomalias)
+            order by fecha
+            """,
+            [fuente, slug, *corte_param],
+        )
+        return [(f, float(p), float(e), float(z)) for f, p, e, z in cur.fetchall()]
