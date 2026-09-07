@@ -230,3 +230,42 @@ def proxima_prediccion(
         return None
     fecha, valor, inferior, superior = futuros[0]
     return Prediccion(fecha, valor, inferior, superior)
+
+
+# --------------------------------------------------------------------------- #
+# Mapa por departamento (#39)
+# --------------------------------------------------------------------------- #
+def semaforo_por_departamento(
+    precios_mensuales: dict[str, dict[str, float]],
+    pesos_por_departamento: dict[str, dict[str, float]],
+    *,
+    mes_actual: str,
+) -> dict[str, Semaforo]:
+    """Evalúa el semáforo de cada departamento con los MISMOS precios.
+
+    Hoy solo Lima tiene precios propios, así que lo único que cambia entre
+    departamentos es la **composición** de la canasta (pesos ENAHO). El mapa
+    resultante es un mapa de estructura de consumo, no de precios: dos
+    departamentos difieren porque comen distinto, no porque paguen distinto. Está
+    dicho en la página; ver `resolver_ambito` para el caso de una sola fuente.
+    """
+    return {
+        cod: evaluar_semaforo(indice_canasta(precios_mensuales, pesos), mes_actual=mes_actual)
+        for cod, pesos in pesos_por_departamento.items()
+        if pesos
+    }
+
+
+def peso_por_departamento(
+    pesos_por_departamento: dict[str, dict[str, float]], slug: str
+) -> dict[str, float]:
+    """Peso de un producto en la canasta de cada departamento, en porcentaje.
+
+    A diferencia del semáforo, esto es dato departamental **puro**: sale entero de
+    la ENAHO y no depende de ningún precio.
+    """
+    return {
+        cod: pesos[slug] * 100.0
+        for cod, pesos in pesos_por_departamento.items()
+        if slug in pesos
+    }
