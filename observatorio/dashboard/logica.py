@@ -286,3 +286,120 @@ def peso_por_departamento(
         for cod, pesos in pesos_por_departamento.items()
         if slug in pesos
     }
+
+
+# --------------------------------------------------------------------------- #
+# Supermercado (#152)
+# --------------------------------------------------------------------------- #
+# Ventanas de comparación: etiqueta → (días de la ventana, días hacia atrás).
+# Se comparan promedios de VARIOS días, no dos fechas puntuales: no todos los
+# SKUs aparecen todos los días, y una fecha suelta deja fuera a los que faltaron
+# ese día por casualidad.
+VENTANAS_SUPER: dict[str, int] = {
+    "Contra el mes pasado": 30,
+    "Contra hace 3 meses": 90,
+}
+DIAS_VENTANA = 7  # promedio de una semana a cada lado
+
+
+def fecha_menos(fecha_iso: str, dias: int) -> str:
+    """'2026-09-08' menos N días, en ISO. Ancla la ventana de comparación."""
+    return (date.fromisoformat(fecha_iso) - timedelta(days=dias)).isoformat()
+
+
+# Un precio se considera "sin cambio" si se movió menos de esto. No es cero
+# exacto porque los precios se promedian sobre una semana: un producto que estuvo
+# en oferta un solo día muestra una diferencia mínima que no es un cambio real.
+UMBRAL_SIN_CAMBIO = 0.005  # 0.5 %
+
+
+@dataclass(frozen=True)
+class CambioCategoria:
+    """Cómo se movieron los precios de una categoría entre dos ventanas.
+
+    Se reporta el desglose y no un solo número porque en el retail la mayoría de
+    los precios no se mueve: en Abarrotes, 7 de cada 10 productos no cambiaron en
+    30 días. Con esa distribución la mediana es 0 % siempre, y una tabla de ceros
+    es correcta pero no dice nada. Lo informativo es cuántos subieron y cuántos
+    bajaron.
+    """
+
+    categoria: str
+    n_productos: int  # SKUs presentes en AMBAS ventanas
+    subieron: int
+    bajaron: int
+    sin_cambio: int
+    variacion_media: float  # promedio de las variaciones individuales, en %
+    precio_tipico: float  # precio mediano actual, para dar contexto
+
+    @property
+    def pct_subieron(self) -> float:
+        return 100.0 * self.subieron / self.n_productos if self.n_productos else 0.0
+
+    @property
+    def pct_bajaron(self) -> float:
+        return 100.0 * self.bajaron / self.n_productos if self.n_productos else 0.0
+
+
+def comparar_matcheado(
+    antes: dict[str, float], ahora: dict[str, float], *, umbral: float = UMBRAL_SIN_CAMBIO
+) -> tuple[int, int, int, int, float] | None:
+    """(n, subieron, bajaron, sin_cambio, variación media %) sobre los SKUs comunes.
+
+    **Por qué matcheado.** Comparar el precio promedio del catálogo entre dos
+    fechas mezcla dos cosas distintas: cuánto cambiaron los precios y cuánto
+    cambió la mezcla de productos. Si entran productos caros o salen baratos, el
+    promedio sube sin que ningún precio se haya movido. Es la misma trampa que
+    resuelven los pesos fijos de la canasta; acá se resuelve comparando cada SKU
+    contra sí mismo y descartando los que no están en las dos ventanas.
+
+    Devuelve None si no hay ningún SKU en común.
+    """
+    ratios = [
+        ahora[sku] / antes[sku]
+        for sku in antes
+        if sku in ahora and antes[sku] > 0 and ahora[sku] > 0
+    ]
+    if not ratios:
+        return None
+    subieron = sum(1 for r in ratios if r > 1 + umbral)
+    bajaron = sum(1 for r in ratios if r < 1 - umbral)
+    media = (sum(ratios) / len(ratios) - 1.0) * 100.0
+    return len(ratios), subieron, bajaron, len(ratios) - subieron - bajaron, media
+
+
+def cambios_por_categoria(
+    antes: dict[str, dict[str, float]],
+    ahora: dict[str, dict[str, float]],
+    precios_tipicos: dict[str, float],
+    *,
+    minimo_productos: int = 20,
+) -> list[CambioCategoria]:
+    """Movimiento de cada categoría, de la que más subió a la que menos.
+
+    Descarta las categorías con menos de `minimo_productos` en común: con pocos
+    SKUs el número salta por ruido y publicarlo le daría una precisión que no
+    tiene. (Panadería y Pastelería, por ejemplo, tiene 10 SKUs en total.)
+    """
+    salida = []
+    for categoria, precios_antes in antes.items():
+        resultado = comparar_matcheado(precios_antes, ahora.get(categoria, {}))
+        if resultado is None:
+            continue
+        n, subieron, bajaron, sin_cambio, media = resultado
+        if n < minimo_productos:
+            continue
+        salida.append(
+            CambioCategoria(
+                categoria, n, subieron, bajaron, sin_cambio, media,
+                precios_tipicos.get(categoria, 0.0),
+            )
+        )
+    return sorted(salida, key=lambda c: -c.variacion_media)
+
+
+def descuento_pct(precio: float, precio_lista: float) -> float | None:
+    """Descuento en % sobre el precio de lista, o None si no hay descuento real."""
+    if precio_lista <= 0 or precio >= precio_lista:
+        return None
+    return (1.0 - precio / precio_lista) * 100.0

@@ -170,7 +170,59 @@ renderer geo nativo: **no** hace falta un token de mapbox ni un tile server.
 
 ---
 
-## 6. A quién le habla la página
+## 6. Supermercado (#152)
+
+Tres bloques sobre `silver.stg_marketplace_precios` (catálogo de Plaza Vea):
+buscador de productos, movimiento de precios por categoría y ofertas vigentes.
+
+Lee `silver` y no `gold` porque `gold.fct_precio_diario` no modela el catálogo
+retail: unifica fuentes y se queda con producto y precio, sin marca ni categoría.
+Si la sección se consolida, el paso natural es un mart de gold.
+
+### Tres cosas que el dato obliga a hacer
+
+**1. Filtrar lo que no es comida.** El scraper baja el catálogo completo de
+"Mercado Saludable", que incluye 215 SKUs de vitaminas, 140 de cosmética y 23 de
+cuidado personal. Sin el filtro, la mejor oferta del día era un acondicionador
+para el cabello. La lista está en `SUBCATEGORIAS_NO_ALIMENTO`; el resto de las 9
+categorías raíz es comida.
+
+**2. Comparar cada producto contra sí mismo.** Comparar el precio promedio del
+catálogo entre dos fechas mezcla inflación con cambio de surtido: si entran
+productos caros o salen baratos, el promedio se mueve sin que ningún precio haya
+cambiado. `comparar_matcheado()` solo mide los SKUs presentes en las dos
+ventanas. Es la misma trampa que resuelven los pesos fijos de la canasta.
+
+**3. Reportar el desglose y no un solo número.** En el retail la mayoría de los
+precios no se mueve: en Abarrotes, **7 de cada 10 productos no cambiaron en 30
+días** (388 subieron, 496 bajaron, 2,036 quedaron igual). Con esa distribución la
+mediana es 0 % siempre, y una tabla de ceros es correcta pero no dice nada. Se
+muestra cuántos subieron, cuántos bajaron y el efecto neto.
+
+### La ventana de "lo vigente"
+
+Las consultas de estado actual **no leen el último día**, sino el último registro
+de cada SKU dentro de una ventana de 7 días (`VENTANA_VIGENTE`). El motivo es
+#153: el scraper entrega días parciales sin fallar. El 2026-09-08 trajo 10 SKUs de
+Panadería cuando los seis días anteriores tenían ~970, y el 2026-09-01 trajo la
+mitad de Abarrotes. Leer una sola fecha esconde productos — de hecho, la primera
+medición de cobertura de este proyecto concluyó que Panadería tenía 10 SKUs.
+
+Es un parche del lado del consumidor: el dato sigue llegando incompleto, y eso se
+arregla en #153.
+
+### Por qué no hay self-joins
+
+`bronze.marketplace_precios` (777k filas) **no tiene ningún índice** y `silver` es
+una vista encima, así que toda consulta hace scan completo contra un
+`statement_timeout` de 2 minutos. La primera versión del buscador se unía consigo
+misma para traer la última fecha de cada SKU y se pasaba del timeout. Con
+`DISTINCT ON` sobre la ventana: ~1.8 s. Un índice en `(fecha_captura)` y otro en
+`(sku_id, fecha_captura)` cambiarían el orden de magnitud — anotado en #153.
+
+---
+
+## 7. A quién le habla la página
 
 El dashboard es un producto público, no una consola interna. La primera versión
 mezclaba las dos cosas: en pantalla se leía "modelo `naive`", "el pipeline corre
@@ -198,7 +250,7 @@ hay dato— siguen visibles. La regla es sacar jerga, no sacar salvedades.
 
 ---
 
-## 7. Riesgo latente: dos definiciones del slug MVP
+## 8. Riesgo latente: dos definiciones del slug MVP
 
 La reducción de nombre crudo → slug del MVP está escrita **dos veces**:
 
@@ -219,7 +271,7 @@ cambie.
 
 ---
 
-## 8. Deploy en Streamlit Community Cloud (#49)
+## 9. Deploy en Streamlit Community Cloud (#49)
 
 ### Lo que el repo aporta
 

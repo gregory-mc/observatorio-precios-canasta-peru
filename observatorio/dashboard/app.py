@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from observatorio.dashboard.paginas import evolucion, inicio, mapa
+from observatorio.dashboard.paginas import evolucion, inicio, mapa, supermercado
 
 
 def main() -> None:
@@ -29,6 +29,9 @@ def main() -> None:
                 inicio.render, title="Canasta básica", icon="🥔", url_path="canasta", default=True
             ),
             st.Page(evolucion.render, title="Evolución", icon="📈", url_path="evolucion"),
+            st.Page(
+                supermercado.render, title="Supermercado", icon="🛒", url_path="supermercado"
+            ),
             st.Page(mapa.render, title="Mapa", icon="🗺️", url_path="mapa"),
         ]
     ).run()

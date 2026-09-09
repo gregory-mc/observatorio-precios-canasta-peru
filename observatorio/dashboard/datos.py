@@ -346,3 +346,222 @@ def geojson_departamentos() -> dict | None:
             return json.loads(respuesta.read())
     except Exception:  # noqa: BLE001 — cualquier fallo de red/parseo degrada a tabla
         return None
+
+
+# --------------------------------------------------------------------------- #
+# Supermercado (#152)
+# --------------------------------------------------------------------------- #
+# Esta sección lee `silver.stg_marketplace_precios` y no `gold`, porque
+# `gold.fct_precio_diario` no modela el catálogo retail: unifica fuentes y se
+# queda con producto/precio, sin marca ni categoría. Si la sección se consolida,
+# el paso natural es un mart de gold para el catálogo de supermercado.
+_TABLA_SUPER = "silver.stg_marketplace_precios"
+
+# El scraper baja el catálogo completo de "Mercado Saludable", que incluye
+# rubros que no son comida: 215 SKUs de vitaminas, 140 de cosmética y 23 de
+# cuidado personal, sobre ~6,900 del día. Se excluyen acá porque esto es un
+# observatorio de precios de ALIMENTOS — sin el filtro, la mejor oferta del día
+# era un acondicionador para el cabello. El resto de las 9 categorías raíz es
+# comida.
+SUBCATEGORIAS_NO_ALIMENTO = (
+    "Mercado Saludable/Vitaminas y Suplementos Orgánicos",
+    "Mercado Saludable/Cosmética Natural",
+    "Mercado Saludable/Cuidado Personal Sostenible",
+)
+
+
+# Ventana para "lo vigente". No se lee un solo día porque el scraper entrega
+# días parciales sin fallar: el 2026-09-08 trajo 10 SKUs de Panadería cuando los
+# seis días anteriores tenían ~970, y el 2026-09-01 se trajo la mitad de
+# Abarrotes. Tomando el último registro de cada SKU dentro de una ventana, un día
+# incompleto deja de esconder productos.
+VENTANA_VIGENTE = 7
+
+
+def _solo_alimentos() -> tuple[str, list[str]]:
+    """(condición SQL, params) que deja fuera lo que no es comida."""
+    condicion = " and ".join(["categoria not like %s || '%%'"] * len(SUBCATEGORIAS_NO_ALIMENTO))
+    return f"({condicion})", list(SUBCATEGORIAS_NO_ALIMENTO)
+
+
+def patron_literal(texto: str) -> str:
+    """Patrón ILIKE que trata la entrada como texto y no como comodines.
+
+    Sin escapar, buscar `%` devuelve el catálogo entero: el filtro se vuelve un
+    no-op silencioso. Mismo cuidado que en la API (#144).
+    """
+    escapado = texto.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{escapado}%"
+
+
+@st.cache_data(ttl=_TTL)
+def rango_fechas_super() -> tuple[str | None, str | None]:
+    """(primera, última) fecha con datos de supermercado."""
+    with _conectar() as conn, conn.cursor() as cur:
+        cur.execute(f"select min(fecha_captura), max(fecha_captura) from {_TABLA_SUPER}")
+        desde, hasta = cur.fetchone()
+    return (desde.isoformat() if desde else None, hasta.isoformat() if hasta else None)
+
+
+@st.cache_data(ttl=_TTL)
+def categorias_super(hasta: str) -> list[str]:
+    """Categorías raíz con alimentos vigentes, de más a menos productos."""
+    alimentos, params_alimentos = _solo_alimentos()
+    with _conectar() as conn, conn.cursor() as cur:
+        cur.execute(
+            f"""
+            with vigente as (
+                select distinct on (sku_id) sku_id, categoria_raiz
+                from {_TABLA_SUPER}
+                where fecha_captura > %s::date - {VENTANA_VIGENTE}
+                  and fecha_captura <= %s::date
+                  and categoria_raiz is not null and {alimentos}
+                order by sku_id, fecha_captura desc
+            )
+            select categoria_raiz, count(*) n from vigente group by 1 order by n desc
+            """,
+            [hasta, hasta, *params_alimentos],
+        )
+        return [c for c, _ in cur.fetchall()]
+
+
+@st.cache_data(ttl=_TTL, show_spinner="Comparando precios…")
+def precios_por_categoria(hasta: str, dias_ventana: int) -> dict[str, dict[str, float]]:
+    """{categoría → {sku_id → precio promedio}} en la ventana que termina en `hasta`.
+
+    Promedia varios días en vez de tomar una fecha suelta: no todos los SKUs
+    aparecen todos los días y una fecha puntual dejaría afuera a los que
+    faltaron por casualidad.
+    """
+    alimentos, params_alimentos = _solo_alimentos()
+    with _conectar() as conn, conn.cursor() as cur:
+        cur.execute(
+            f"""
+            select categoria_raiz, sku_id, avg(precio)
+            from {_TABLA_SUPER}
+            where fecha_captura > %s::date - %s and fecha_captura <= %s::date
+              and precio > 0 and categoria_raiz is not null
+              and {alimentos}
+            group by 1, 2
+            """,
+            [hasta, dias_ventana, hasta, *params_alimentos],
+        )
+        salida: dict[str, dict[str, float]] = {}
+        for categoria, sku, precio in cur.fetchall():
+            salida.setdefault(categoria, {})[sku] = float(precio)
+    return salida
+
+
+@st.cache_data(ttl=_TTL)
+def precio_tipico_por_categoria(hasta: str) -> dict[str, float]:
+    """{categoría → precio mediano vigente}, para dar contexto a la variación."""
+    alimentos, params_alimentos = _solo_alimentos()
+    with _conectar() as conn, conn.cursor() as cur:
+        cur.execute(
+            f"""
+            with vigente as (
+                select distinct on (sku_id) sku_id, categoria_raiz, precio
+                from {_TABLA_SUPER}
+                where fecha_captura > %s::date - {VENTANA_VIGENTE}
+                  and fecha_captura <= %s::date
+                  and precio > 0 and categoria_raiz is not null and {alimentos}
+                order by sku_id, fecha_captura desc
+            )
+            select categoria_raiz, percentile_cont(0.5) within group (order by precio)
+            from vigente group by 1
+            """,
+            [hasta, hasta, *params_alimentos],
+        )
+        return {c: float(pr) for c, pr in cur.fetchall()}
+
+
+@st.cache_data(ttl=_TTL, show_spinner="Buscando…")
+def buscar_super(texto: str, hasta: str, limite: int = 40) -> list[dict]:
+    """Alimentos vigentes cuyo nombre contiene `texto`, con su precio más reciente.
+
+    Se busca en una ventana de 7 días y se toma el último registro de cada
+    SKU, no el día suelto más reciente: el scraper entrega días parciales sin
+    fallar, y leer una sola fecha esconde productos (ver `VENTANA_VIGENTE`).
+
+    No se busca en todo el histórico por costo: `bronze.marketplace_precios` no
+    tiene ningún índice, y sobre las 777k filas completas la consulta se pasa del
+    `statement_timeout` de 2 minutos. Con la ventana, ~1.8 s.
+    """
+    alimentos, params_alimentos = _solo_alimentos()
+    with _conectar() as conn, conn.cursor() as cur:
+        cur.execute(
+            rf"""
+            select distinct on (sku_id)
+                   sku_id, nombre, marca, categoria, precio, precio_lista,
+                   disponible, url, fecha_captura
+            from {_TABLA_SUPER}
+            where fecha_captura > %s::date - {VENTANA_VIGENTE}
+              and fecha_captura <= %s::date
+              and nombre ilike %s escape ''
+              and precio > 0
+              and {alimentos}
+            order by sku_id, fecha_captura desc
+            limit %s
+            """,
+            [hasta, hasta, patron_literal(texto), *params_alimentos, limite],
+        )
+        columnas = [d[0] for d in cur.description]
+        filas = [dict(zip(columnas, fila, strict=True)) for fila in cur.fetchall()]
+    # `distinct on` obliga a ordenar por sku_id; el orden útil se aplica acá.
+    return sorted(filas, key=lambda f: (not f["disponible"], f["nombre"]))
+
+
+@st.cache_data(ttl=_TTL)
+def serie_sku(sku_id: str) -> list[tuple]:
+    """[(fecha, precio, precio_lista)] de un SKU, día por día."""
+    with _conectar() as conn, conn.cursor() as cur:
+        cur.execute(
+            f"""
+            select fecha_captura, avg(precio), avg(precio_lista)
+            from {_TABLA_SUPER}
+            where sku_id = %s and precio > 0
+            group by fecha_captura order by fecha_captura
+            """,
+            [sku_id],
+        )
+        return [
+            (fecha, float(precio), float(lista) if lista is not None else None)
+            for fecha, precio, lista in cur.fetchall()
+        ]
+
+
+@st.cache_data(ttl=_TTL)
+def ofertas_super(
+    categoria: str | None, solo_disponibles: bool, hasta: str, limite: int = 30
+) -> list[dict]:
+    """Mayores descuentos vigentes, sobre el último precio conocido de cada SKU."""
+    alimentos, params_alimentos = _solo_alimentos()
+    filtros, params = [], [hasta, hasta, *params_alimentos]
+    if categoria:
+        filtros.append("categoria_raiz = %s")
+        params.append(categoria)
+    if solo_disponibles:
+        filtros.append("disponible")
+    condicion = (" where " + " and ".join(filtros)) if filtros else ""
+    with _conectar() as conn, conn.cursor() as cur:
+        cur.execute(
+            f"""
+            with vigente as (
+                select distinct on (sku_id)
+                       sku_id, nombre, marca, categoria_raiz, precio, precio_lista,
+                       url, disponible, fecha_captura
+                from {_TABLA_SUPER}
+                where fecha_captura > %s::date - {VENTANA_VIGENTE}
+                  and fecha_captura <= %s::date
+                  and precio_lista > 0 and precio < precio_lista and {alimentos}
+                order by sku_id, fecha_captura desc
+            )
+            select nombre, marca, categoria_raiz, precio, precio_lista, url, disponible
+            from vigente{condicion}
+            order by (1 - precio / precio_lista) desc
+            limit %s
+            """,
+            [*params, limite],
+        )
+        columnas = [d[0] for d in cur.description]
+        return [dict(zip(columnas, fila, strict=True)) for fila in cur.fetchall()]
