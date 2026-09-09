@@ -197,7 +197,8 @@ cambie.
 
 | Archivo | Para qué |
 |---|---|
-| `requirements.txt` | Community Cloud lo busca en la raíz. Instala `.[dashboard]`, así que **pyproject sigue siendo la única fuente de verdad** de las dependencias |
+| `pyproject.toml` → `[tool.poetry]` | **Es el que Cloud usa de verdad**: en cuanto ve un pyproject.toml instala con Poetry e ignora el requirements.txt (ver abajo) |
+| `requirements.txt` | Respaldo, por si el instalador cambia de criterio. Instala `.[dashboard]` |
 | `.streamlit/config.toml` | Tema y ajustes. Se versiona: no lleva secretos |
 | `.streamlit/secrets.toml.example` | Plantilla. El `secrets.toml` real está gitignoreado |
 | `streamlit_app.py` | Puente en la raíz: es el nombre que Community Cloud propone por defecto en "Main file path" |
@@ -213,6 +214,34 @@ El puente existe porque el formulario de deploy trae `streamlit_app.py`
 precargado, y dejarlo así fallaba con *"This file does not exist"*: el dashboard
 vive dentro del paquete, no en la raíz. Con el puente, cualquiera de los dos
 valores funciona.
+
+### El instalador de Cloud es Poetry, no pip
+
+Community Cloud instala con **Poetry** en cuanto encuentra un `pyproject.toml`, y
+el `requirements.txt` de la raíz queda ignorado. Poetry no resuelve solo dos
+cosas de este proyecto, y el primer deploy falló por las dos a la vez:
+
+1. **Busca un paquete con el nombre del proyecto** (`observatorio_precios`) y el
+   nuestro se llama `observatorio` → `No file/folder found for package
+   observatorio-precios`, y el build muere ahí.
+2. **No entiende `[project.optional-dependencies]`** sin `--extras`, y Cloud no
+   lo pasa: el extra `dashboard` se salteaba entero. En el log se ve como
+   `Installing streamlit (…): Skipped for the following reason: Not required`.
+   O sea que ni resolviendo el punto 1 habría arrancado la app.
+
+Se resuelve con un bloque `[tool.poetry]` que declara dónde está el paquete y un
+**grupo** `dashboard` — los grupos, a diferencia de los extras, se instalan por
+defecto. `pip` y `hatchling` ignoran `[tool.poetry]`, así que el desarrollo local
+y el CI no se enteran.
+
+Efecto lateral bueno: el grupo instala **solo** lo que el dashboard necesita.
+Prophet y FastAPI quedan afuera (`Not required`), y eso importa porque Prophet
+baja cmdstan y haría el build lento y frágil.
+
+> El grupo duplica los pines de `streamlit` y `plotly` que ya están en el extra.
+> Es el precio de que el instalador de Cloud no lea extras: si se cambian las
+> versiones en `[project.optional-dependencies]`, hay que cambiarlas también en
+> el grupo.
 
 ### La credencial
 

@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Observatorio diario de precios de alimentos y su impacto en la canasta básica en Perú"
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "MIT" }
+license = "MIT"
 
 # Dependencias compartidas por todos los componentes
 dependencies = [
@@ -79,6 +79,32 @@ dev = [
     "mypy>=1.10",
     "httpx>=0.27",  # cliente de tests para FastAPI (starlette TestClient)
 ]
+
+# --------------------------------------------------------------------------- #
+# Solo para el instalador de Streamlit Community Cloud (#49)
+# --------------------------------------------------------------------------- #
+# Cloud instala con Poetry en cuanto ve un pyproject.toml, e ignora el
+# requirements.txt de la raíz. Dos cosas que Poetry no resuelve por su cuenta y
+# que hacían fallar el deploy:
+#
+#   1. Busca un paquete con el nombre del proyecto (`observatorio_precios`) y el
+#      nuestro se llama `observatorio` → "No file/folder found for package
+#      observatorio-precios" y el build muere.
+#   2. No entiende `[project.optional-dependencies]` sin `--extras`, y Cloud no
+#      lo pasa: el extra `dashboard` se salteaba entero (streamlit y plotly
+#      aparecían como "Not required"), así que ni con el punto 1 resuelto habría
+#      arrancado la app.
+#
+# Los grupos de Poetry, a diferencia de los extras, se instalan por defecto.
+# Nada de esto afecta a pip ni a hatchling, que ignoran `[tool.poetry]`.
+[tool.poetry]
+packages = [{ include = "observatorio" }]
+
+# Espejo del extra `dashboard` para este instalador. Si cambian las versiones
+# allá arriba, hay que cambiarlas acá también.
+[tool.poetry.group.dashboard.dependencies]
+streamlit = ">=1.36"
+plotly = ">=5.22"
 
 [tool.hatch.build.targets.wheel]
 packages = ["observatorio"]
