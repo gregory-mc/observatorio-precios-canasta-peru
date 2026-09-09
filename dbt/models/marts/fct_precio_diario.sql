@@ -1,3 +1,17 @@
+{{
+    config(
+        indexes=[
+            {'columns': ['fuente', 'cod_departamento', 'fecha_captura'], 'type': 'btree'},
+        ]
+    )
+}}
+
+-- Índice declarado acá y no por DDL suelto: este mart es `table`, así que cada
+-- `dbt build` lo DROPEA y lo recrea — un `create index` a mano desaparecería en
+-- la corrida siguiente sin que nada avise. Medido sobre las consultas reales del
+-- dashboard: el índice de canasta pasa de 0.41s a 0.12s (3.5x) y la serie de un
+-- producto de 0.77s a 0.11s (7.1x). Ver #153.
+
 -- Gold: hecho de precio diario unificado y conformado desde las fuentes de
 -- precios de alimentos (silver). Grain: (fecha_captura, fuente, cod_departamento,
 -- producto). Faithful — conserva los productos tal como vienen; la reducción a
