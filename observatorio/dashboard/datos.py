@@ -25,6 +25,20 @@ from observatorio.validacion.canasta_vs_ipc import MAPEO_PRECIO_MVP, _sql_case_s
 FUENTE_DEFECTO = "sisap_minorista"
 FUENTES = ("sisap_minorista", "sisap_mayorista", "marketplace")
 
+# Cómo se llaman las fuentes en pantalla. Los nombres internos
+# (`sisap_minorista`) son de la base, no del lector: SISAP es el sistema de
+# precios de MIDAGRI y "marketplace" es el catálogo retail de Plaza Vea.
+NOMBRES_FUENTE = {
+    "sisap_minorista": "Mercados de barrio (Lima)",
+    "sisap_mayorista": "Mercados mayoristas (Lima)",
+    "marketplace": "Supermercado (Plaza Vea)",
+}
+
+
+def nombre_fuente(clave: str) -> str:
+    """Nombre legible de una fuente de precios."""
+    return NOMBRES_FUENTE.get(clave, clave)
+
 _TTL = 3600  # los pipelines corren 1×/día: cachear una hora no atrasa nada.
 
 

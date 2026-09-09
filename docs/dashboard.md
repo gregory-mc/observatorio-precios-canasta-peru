@@ -170,7 +170,35 @@ renderer geo nativo: **no** hace falta un token de mapbox ni un tile server.
 
 ---
 
-## 6. Riesgo latente: dos definiciones del slug MVP
+## 6. A quién le habla la página
+
+El dashboard es un producto público, no una consola interna. La primera versión
+mezclaba las dos cosas: en pantalla se leía "modelo `naive`", "el pipeline corre
+los lunes", "percentiles 1–99", "issue #102". Eran notas correctas y escritas
+para no engañar a nadie, pero puestas en el lugar equivocado.
+
+Reglas que quedaron:
+
+- **Los títulos son preguntas, no nombres de tabla.** "¿Se encareció la comida
+  este mes?" en vez de "Canasta básica de alimentos".
+- **Nada de nombres internos en pantalla.** `sisap_minorista` se muestra como
+  "Mercados de barrio (Lima)"; `2026-08` como "agosto de 2026". Los mapeos son
+  `datos.nombre_fuente()` y `logica.mes_legible()`.
+- **El detalle técnico va en un desplegable**, nunca en el cuerpo. "Cómo se
+  mide" y "Cómo se calcula la proyección" existen para quien quiera auditar el
+  número, sin que el resto tenga que leerlo.
+- **Un control que no cambia nada no se muestra.** El selector de precios
+  desaparece en el modo de consumo del mapa, donde no afecta el resultado.
+- **Los mensajes de error hablan al visitante**, y solo mencionan la
+  configuración como aparte para quien administra.
+
+Lo que **no** se suavizó: las advertencias que cambian cómo se interpreta el
+número —que fuera de Lima no hay precios propios, que la línea se corta donde no
+hay dato— siguen visibles. La regla es sacar jerga, no sacar salvedades.
+
+---
+
+## 7. Riesgo latente: dos definiciones del slug MVP
 
 La reducción de nombre crudo → slug del MVP está escrita **dos veces**:
 
@@ -191,7 +219,7 @@ cambie.
 
 ---
 
-## 7. Deploy en Streamlit Community Cloud (#49)
+## 8. Deploy en Streamlit Community Cloud (#49)
 
 ### Lo que el repo aporta
 

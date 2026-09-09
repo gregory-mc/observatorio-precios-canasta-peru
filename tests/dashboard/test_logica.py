@@ -22,6 +22,7 @@ from observatorio.dashboard.logica import (
     evaluar_semaforo,
     indice_canasta,
     mes_anterior,
+    mes_legible,
     resolver_ambito,
 )
 
@@ -171,3 +172,22 @@ class TestResolverAmbito:
     def test_sin_ninguna_cobertura_lo_dice_en_vez_de_romper(self):
         amb = resolver_ambito("01", deptos_con_precio=set(), tiene_nacional=False)
         assert amb.tipo == PROXY and "ninguno" in amb.nota
+
+
+class TestMesLegible:
+    """Los códigos ISO de mes son de la base, no del lector."""
+
+    def test_formato_castellano(self):
+        assert mes_legible("2026-08") == "agosto de 2026"
+
+    def test_enero_y_diciembre(self):
+        assert mes_legible("2026-01") == "enero de 2026"
+        assert mes_legible("2025-12") == "diciembre de 2025"
+
+    def test_sin_mes(self):
+        assert mes_legible(None) == "—"
+        assert mes_legible("") == "—"
+
+    def test_valor_raro_se_devuelve_tal_cual_en_vez_de_romper(self):
+        assert mes_legible("no-es-un-mes") == "no-es-un-mes"
+        assert mes_legible("2026-13") == "2026-13"

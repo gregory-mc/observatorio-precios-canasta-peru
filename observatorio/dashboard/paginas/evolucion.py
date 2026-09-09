@@ -29,7 +29,7 @@ _NOMBRES = {
 }
 
 
-def _figura(serie, preds, anoms, *, nombre: str) -> go.Figure:
+def _figura(serie, preds, anoms) -> go.Figure:
     fig = go.Figure()
 
     if preds:
@@ -43,7 +43,7 @@ def _figura(serie, preds, anoms, *, nombre: str) -> go.Figure:
                 fillcolor="rgba(31,119,180,.15)",
                 line={"width": 0},
                 hoverinfo="skip",
-                name="Banda de pronóstico",
+                name="Rango probable",
             )
         )
         fig.add_trace(
@@ -52,8 +52,8 @@ def _figura(serie, preds, anoms, *, nombre: str) -> go.Figure:
                 y=[v for _, v, _, _ in preds],
                 mode="lines",
                 line={"dash": "dash", "width": 2, "color": "#1f77b4"},
-                name="Pronóstico",
-                hovertemplate="%{x|%d/%m/%Y}<br>S/ %{y:.2f} previsto<extra></extra>",
+                name="Proyección",
+                hovertemplate="%{x|%d/%m/%Y}<br>S/ %{y:.2f} proyectado<extra></extra>",
             )
         )
 
@@ -63,7 +63,7 @@ def _figura(serie, preds, anoms, *, nombre: str) -> go.Figure:
             y=[v for _, v in serie],
             mode="lines",
             line={"width": 2, "color": "#111"},
-            name="Precio observado",
+            name="Precio",
             connectgaps=False,  # los nulos de `insertar_huecos` cortan la línea
             hovertemplate="%{x|%d/%m/%Y}<br>S/ %{y:.2f}<extra></extra>",
         )
@@ -81,42 +81,50 @@ def _figura(serie, preds, anoms, *, nombre: str) -> go.Figure:
                     "symbol": "circle-open",
                     "line": {"width": 2},
                 },
-                name="Anomalía",
+                name="Precio fuera de lo habitual",
                 customdata=[(e, z) for _, _, e, z in anoms],
                 hovertemplate=(
-                    "%{x|%d/%m/%Y}<br>S/ %{y:.2f} observado"
-                    "<br>S/ %{customdata[0]:.2f} esperado"
-                    "<br>z = %{customdata[1]:.1f}<extra></extra>"
+                    "%{x|%d/%m/%Y}<br>S/ %{y:.2f} ese día"
+                    "<br>S/ %{customdata[0]:.2f} era lo esperable"
+                    "<extra></extra>"
                 ),
             )
         )
 
     fig.update_layout(
-        title=f"{nombre} — S/ por kg",
         hovermode="x unified",
         height=460,
-        margin={"l": 10, "r": 10, "t": 50, "b": 10},
+        margin={"l": 10, "r": 10, "t": 40, "b": 10},
         legend={"orientation": "h", "yanchor": "bottom", "y": 1.02, "x": 0},
     )
-    fig.update_yaxes(title=None, rangemode="tozero")
+    fig.update_yaxes(title="Soles por kilo", rangemode="tozero")
     fig.update_xaxes(title=None)
     return fig
 
 
 def render() -> None:
-    st.title("📈 Evolución temporal")
+    st.title("📈 Cómo viene cambiando cada precio")
     st.caption(
-        "Precio diario por producto, con la banda de pronóstico y las anomalías "
-        "detectadas por el pipeline de ML."
+        "Elegí un producto y mirá su precio día por día. La línea negra es lo que "
+        "costó; la punteada, hacia dónde va en las próximas dos semanas. Los "
+        "círculos rojos marcan días en que el precio se salió de lo habitual."
     )
 
     if not datos.hay_conexion():
-        st.error("Falta `SUPABASE_DB_URL` en el entorno o en `.env`.")
+        st.error(
+            "No se pudo conectar a la base de precios. Si administrás este "
+            "dashboard, falta configurar `SUPABASE_DB_URL`."
+        )
         return
 
     with st.sidebar:
         st.header("Filtros")
-        fuente = st.selectbox("Fuente de precios", options=_FUENTES_CON_PRED, index=0)
+        fuente = st.selectbox(
+            "Precios de",
+            options=_FUENTES_CON_PRED,
+            index=0,
+            format_func=datos.nombre_fuente,
+        )
         disponibles = datos.productos_con_prediccion(fuente) or list(_NOMBRES)
         slug = st.selectbox(
             "Producto",
@@ -138,48 +146,61 @@ def render() -> None:
 
     crudos = datos.serie_precio(fuente, ambito.clave, slug, inicio.isoformat() if inicio else None)
     if not crudos:
-        st.warning(f"No hay serie de {_NOMBRES.get(slug, slug)} en `{fuente}` para ese período.")
+        st.warning(
+            f"No hay precios de {_NOMBRES.get(slug, slug)} para ese período."
+        )
         return
 
     serie = insertar_huecos(crudos)
-    preds, modelo, corrida = datos.predicciones(fuente, slug)
+    preds, _modelo, corrida = datos.predicciones(fuente, slug)
     anoms = datos.anomalias(fuente, slug, inicio.isoformat() if inicio else None)
 
     st.plotly_chart(
-        _figura(serie, preds, anoms, nombre=_NOMBRES.get(slug, slug)),
+        _figura(serie, preds, anoms),
         width="stretch",
     )
 
     izq, centro, der = st.columns(3)
     ultimo_dia, ultimo_precio = crudos[-1]
-    izq.metric("Último precio", f"S/ {ultimo_precio:.2f}", help=f"Del {ultimo_dia:%d/%m/%Y}")
+    izq.metric(
+        "Precio de hoy",
+        f"S/ {ultimo_precio:.2f}",
+        help=f"Último dato: {ultimo_dia:%d/%m/%Y}",
+    )
 
     prox = proxima_prediccion([(f, v, i, s) for f, v, i, s in preds], hoy=hoy)
     if prox:
         centro.metric(
-            f"Previsto {prox.fecha:%d/%m}",
+            f"Proyectado al {prox.fecha:%d/%m}",
             f"S/ {prox.valor:.2f}",
             delta=f"{(prox.valor / ultimo_precio - 1) * 100:+.1f}%",
-            help=f"Banda: S/ {prox.inferior:.2f} – {prox.superior:.2f}",
+            help=f"Podría ubicarse entre S/ {prox.inferior:.2f} y S/ {prox.superior:.2f}",
         )
     else:
-        centro.metric("Previsto", "—", help="La última corrida ya venció su horizonte")
+        centro.metric("Proyectado", "—", help="Todavía no hay una proyección vigente")
 
-    der.metric("Anomalías en el período", len(anoms))
+    der.metric("Días fuera de lo habitual", len(anoms))
 
-    if modelo:
-        st.caption(
-            f"Pronóstico del modelo **`{modelo}`**, corrida del {corrida} "
-            "(horizonte de 14 días, el pipeline corre los lunes). "
-            "Prophet quedó apagado el 2026-07-24: perdía contra este baseline "
-            "(MAPE 9.44 vs 6.33). Las bandas son empíricas, no intervalos "
-            "bayesianos."
-        )
     if not preds:
-        st.info(f"Sin pronóstico para {_NOMBRES.get(slug, slug)} en `{fuente}`.")
+        st.info(f"Todavía no hay una proyección para {_NOMBRES.get(slug, slug)}.")
 
     st.caption(
-        "La línea se **corta** donde faltan datos en vez de cruzarlos con un "
-        "segmento recto: SISAP no tiene 2026-01 a 2026-05 y unir esos extremos "
-        "aparentaría un dato que no existe."
+        "Donde la línea se corta es porque la fuente no publicó precios esos días."
     )
+
+    with st.expander("Cómo se calcula la proyección"):
+        vigencia = f" (la vigente es del {corrida})." if corrida else "."
+        st.markdown(
+            f"""
+La proyección estima las próximas dos semanas a partir del comportamiento
+reciente del precio, y se recalcula cada lunes{vigencia}
+
+**Sirve para ver la tendencia, no como un valor exacto.** El *rango probable*
+—la franja celeste— dice más que la línea: cuanto más ancho, menos previsible
+es ese producto.
+
+Un día se marca como *fuera de lo habitual* cuando el precio se aparta bastante
+de lo que venía siendo normal para ese producto. Suele coincidir con
+desabastecimientos, feriados o un error de la fuente.
+"""
+        )
