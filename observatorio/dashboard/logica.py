@@ -108,6 +108,23 @@ def resolver_ambito(
     )
 
 
+_MESES = (
+    "enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+)
+
+
+def mes_legible(mes: str | None) -> str:
+    """'2026-08' → 'agosto de 2026'. Los códigos ISO son de la base, no del lector."""
+    if not mes:
+        return "—"
+    try:
+        anio, numero = (int(x) for x in mes.split("-"))
+        return f"{_MESES[numero - 1]} de {anio}"
+    except (ValueError, IndexError):
+        return mes
+
+
 def mes_anterior(mes: str) -> str:
     """'2026-01' → '2025-12'."""
     anio, m = (int(x) for x in mes.split("-"))

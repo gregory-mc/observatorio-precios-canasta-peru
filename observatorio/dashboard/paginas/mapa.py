@@ -9,6 +9,7 @@ import streamlit as st
 
 from observatorio.dashboard import datos
 from observatorio.dashboard.logica import (
+    mes_legible,
     peso_por_departamento,
     semaforo_por_departamento,
 )
@@ -22,8 +23,8 @@ _NOMBRES = {
     "limon": "Limón",
 }
 
-_VARIACION = "Variación mensual de la canasta"
-_PESO = "Peso de un producto en la canasta"
+_PESO = "Qué se consume en cada departamento"
+_VARIACION = "Cuánto golpea la suba en cada departamento"
 
 
 def _coropleta(geojson, valores: dict[str, float], nombres: dict[str, str], *, etiqueta, escala):
@@ -59,22 +60,30 @@ def _tabla(valores: dict[str, float], nombres: dict[str, str], *, etiqueta: str,
 
 
 def render() -> None:
-    st.title("🗺️ Mapa por departamento")
+    st.title("🗺️ El mapa del consumo")
+    st.caption(
+        "No todo el país come lo mismo, y por eso una misma suba de precios no "
+        "pega igual en todas partes. Este mapa muestra dónde pesa más cada "
+        "alimento en el gasto de los hogares."
+    )
 
     if not datos.hay_conexion():
-        st.error("Falta `SUPABASE_DB_URL` en el entorno o en `.env`.")
+        st.error(
+            "No se pudo conectar a la base de precios. Si administrás este "
+            "dashboard, falta configurar `SUPABASE_DB_URL`."
+        )
         return
 
     nombres = dict(datos.departamentos())
     pesos = datos.pesos_por_departamento()
     if not pesos:
-        st.warning("No hay canasta cargada en `gold.canasta_consumo_dept`.")
+        st.warning("Todavía no hay datos de consumo por departamento.")
         return
 
     with st.sidebar:
         st.header("Filtros")
-        modo = st.radio("Qué mapear", options=[_VARIACION, _PESO])
-        slug = None
+        modo = st.radio("Qué mapear", options=[_PESO, _VARIACION])
+        slug, fuente = None, datos.FUENTE_DEFECTO
         if modo == _PESO:
             slugs = sorted({s for p in pesos.values() for s in p})
             slug = st.selectbox(
@@ -83,16 +92,24 @@ def render() -> None:
                 index=slugs.index("papa") if "papa" in slugs else 0,
                 format_func=lambda s: _NOMBRES.get(s, s),
             )
-        fuente = st.selectbox("Fuente de precios", options=datos.FUENTES, index=0)
+        else:
+            # El selector de precios solo aparece en el modo que los usa: en el de
+            # consumo no cambiaría nada y un control inerte confunde.
+            fuente = st.selectbox(
+                "Precios de",
+                options=datos.FUENTES,
+                index=0,
+                format_func=datos.nombre_fuente,
+            )
 
     if modo == _PESO:
         valores = peso_por_departamento(pesos, slug)
         etiqueta = f"% de la canasta que es {_NOMBRES.get(slug, slug)}"
         con_signo, escala = False, "Blues"
         st.caption(
-            f"Qué porción del gasto en alimentos frescos representa "
-            f"**{_NOMBRES.get(slug, slug)}** en cada departamento. Dato departamental "
-            "puro: sale entero de la ENAHO y no depende de ningún precio."
+            f"De cada S/ 100 que un hogar gasta en estos seis alimentos, cuánto "
+            f"se va en **{_NOMBRES.get(slug, slug)}**. Sale de la encuesta de "
+            "hogares del INEI."
         )
     else:
         # Un solo conjunto de precios para los 25 departamentos: hoy solo Lima
@@ -101,7 +118,7 @@ def render() -> None:
         clave = next(iter(deptos_con_precio), None) if deptos_con_precio else "nacional"
         precios = datos.precios_mensuales(fuente, clave or "todas")
         if not precios:
-            st.warning(f"No hay precios en `{fuente}`.")
+            st.warning(f"No hay precios en {datos.nombre_fuente(fuente)}.")
             return
 
         hoy = date.today()
@@ -121,21 +138,24 @@ def render() -> None:
 
         etiqueta, con_signo, escala = "Variación mensual (%)", True, "RdYlGn_r"
         mes = next(iter(semaforos.values())).mes
-        st.warning(
-            f"**Este mapa muestra composición de consumo, no diferencias de precio.** "
-            f"Solo {nombres.get(next(iter(deptos_con_precio), ''), 'Lima')} tiene precios "
-            f"propios en `{fuente}`, así que los 25 departamentos se valorizan con los "
-            "mismos precios: lo que cambia de un departamento a otro es **qué** consume. "
-            "Cuando SISAP cubra más departamentos, el mapa pasa a ser de precios sin "
-            "tocar el código."
+        st.caption(
+            f"Cuánto se encareció la canasta local en {mes_legible(mes)} respecto "
+            "del mes "
+            "anterior, aplicando los mismos precios a la dieta de cada "
+            "departamento. Las diferencias del mapa vienen de **qué** se come, "
+            "no de dónde está más caro."
         )
-        st.caption(f"Variación del costo de la canasta en {mes} contra el mes anterior.")
+        st.info(
+            "Todavía no medimos precios propios fuera de Lima, así que este mapa "
+            "no dice dónde la comida cuesta más. Dice dónde una misma suba "
+            "golpea más fuerte, según lo que se consume en cada zona."
+        )
 
     geojson = datos.geojson_departamentos()
     if geojson is None:
         st.info(
-            "No se pudieron cargar los límites departamentales (la descarga falló). "
-            "Abajo van los mismos datos en tabla."
+            "No se pudo cargar el mapa en este momento. Abajo están los mismos "
+            "datos en tabla."
         )
     else:
         st.plotly_chart(
