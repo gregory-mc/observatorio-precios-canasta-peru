@@ -119,11 +119,15 @@ models:
       - name: cod_departamento
         description: "Departamento ('15' Lima para SISAP)."
       - name: producto
-        description: "Slug del producto MVP."
+        description: "Slug del producto de la canasta."
         tests:
           - not_null
+          # Los 13 productos de la canasta (#155). Fuente de verdad:
+          # `observatorio/canasta/productos.py::CANASTA_GRUPOS` y su espejo SQL
+          # `dbt/macros/slug_producto_mvp.sql`. Si se agrega un producto hay que
+          # tocar los tres — este test es el que avisa si falta uno.
           - accepted_values:
-              values: ["papa", "cebolla", "tomate", "huevo", "limon", "pollo"]
+              values: ["aceite", "arroz", "azucar", "carne_res", "cebolla", "huevo", "leche", "limon", "menestras", "papa", "pescado", "pollo", "tomate"]
       - name: fecha_pred
         description: "Día pronosticado (futuro respecto a fecha_corrida)."
         tests: [not_null]
@@ -165,11 +169,15 @@ models:
       - name: cod_departamento
         description: "Departamento ('15' Lima para SISAP)."
       - name: producto
-        description: "Slug del producto MVP."
+        description: "Slug del producto de la canasta."
         tests:
           - not_null
+          # Los 13 productos de la canasta (#155). Fuente de verdad:
+          # `observatorio/canasta/productos.py::CANASTA_GRUPOS` y su espejo SQL
+          # `dbt/macros/slug_producto_mvp.sql`. Si se agrega un producto hay que
+          # tocar los tres — este test es el que avisa si falta uno.
           - accepted_values:
-              values: ["papa", "cebolla", "tomate", "huevo", "limon", "pollo"]
+              values: ["aceite", "arroz", "azucar", "carne_res", "cebolla", "huevo", "leche", "limon", "menestras", "papa", "pescado", "pollo", "tomate"]
       - name: fecha
         description: "Día de la observación anómala."
         tests: [not_null]
