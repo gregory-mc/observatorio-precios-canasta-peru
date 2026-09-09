@@ -112,3 +112,41 @@ CREATE TABLE IF NOT EXISTS bronze.clima (
     temp_min_c     double precision,
     ingested_at    timestamptz NOT NULL DEFAULT now()
 );
+
+-- ---------------------------------------------------------------------------
+-- Índices (#153)
+-- ---------------------------------------------------------------------------
+-- bronze no tenía ningún índice, y `silver.*` son vistas encima: toda consulta
+-- del dashboard hacía scan completo contra el statement_timeout de 2 min de
+-- Supabase. Medido antes/después sobre las consultas reales de la app:
+--
+--   serie de un SKU de supermercado    1.30s -> 0.10s   (12.4x)
+--   ofertas del día                    1.56s -> 0.24s   ( 6.4x)
+--   ventana de 7 días por categoría    2.64s -> 0.47s   ( 5.6x)
+--   búsqueda por nombre                1.30s -> 0.32s   ( 4.1x)
+--
+-- Costo: +30 MB sobre una base de 677 MB. CONCURRENTLY para no bloquear la
+-- carga nocturna si se re-aplican con la app viva.
+--
+-- NO se indexan, a propósito:
+--   * bronze.osinergmin_precios (177 MB, 761k filas): nada lo lee todavía —
+--     no entra en gold.fct_precio_diario (es combustible, no alimento).
+--     Indexarlo hoy sería pagar espacio por cero beneficio.
+--   * gold.* : son tablas materializadas por dbt, que las DROPEA y recrea en
+--     cada build. Un índice creado a mano ahí desaparece solo. Van declarados
+--     en el `config(indexes=...)` del modelo — ver dbt/models/marts/.
+
+-- Filtro por ventana de fechas: es el que usan todas las consultas de "lo
+-- vigente" de la sección de supermercado.
+create index concurrently if not exists ix_marketplace_fecha
+    on bronze.marketplace_precios (fecha_captura);
+
+-- Serie histórica de un producto y el `distinct on (sku_id) order by
+-- fecha_captura desc` que resuelve el precio más reciente de cada SKU.
+create index concurrently if not exists ix_marketplace_sku_fecha
+    on bronze.marketplace_precios (sku_id, fecha_captura desc);
+
+-- La carga es idempotente por (fecha_captura, tipo_mercado): borra e inserta.
+-- La tabla es chica (3 MB) pero el índice también, y evita el scan del DELETE.
+create index concurrently if not exists ix_sisap_fecha_tipo
+    on bronze.sisap_precios (fecha_captura, tipo_mercado);

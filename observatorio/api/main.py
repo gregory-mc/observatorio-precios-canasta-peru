@@ -67,6 +67,14 @@ def _pagina(
     ``COUNT(*) OVER ()`` calcula el total sobre el mismo scan que la página: no
     hace falta una segunda query, que además hoy significaría una segunda
     conexión (cada ``db.consultar`` abre la suya).
+
+    **El total tiene un costo que ningún índice arregla.** La window function
+    obliga a leer TODAS las filas que matchean el filtro, no solo la página. Con
+    ``fuente='marketplace'`` (701k de 754k filas) eso son ~1.5 s, y medido con y
+    sin índice sobre esas columnas la diferencia es nula (#153): el trabajo es
+    contar, no encontrar. Se paga a propósito porque un total exacto es lo que
+    permite paginar; si algún día molesta, la salida es hacerlo opcional por
+    query param, no indexar más.
     """
     clausula = ("WHERE " + " AND ".join(where)) if where else ""
     sql = (
