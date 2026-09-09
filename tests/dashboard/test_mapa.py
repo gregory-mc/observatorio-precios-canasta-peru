@@ -5,9 +5,9 @@ from __future__ import annotations
 import pytest
 
 from observatorio.dashboard.logica import (
-    AMBAR,
     ROJO,
     SIN_DATO,
+    clasificar,
     peso_por_departamento,
     semaforo_por_departamento,
 )
@@ -38,9 +38,13 @@ class TestSemaforoPorDepartamento:
     def test_clasifica_cada_departamento_por_su_cuenta(self):
         # Los mismos precios dan tres veredictos distintos según la canasta local.
         sems = semaforo_por_departamento(_PRECIOS, _PESOS, mes_actual="2026-09")
-        assert sems["01"].nivel == ROJO  # 16 % ≥ 7.5
-        assert sems["04"].nivel == ROJO  # 10 % ≥ 7.5
-        assert sems["15"].nivel == AMBAR  # 4 %: entre 3 y 7.5
+        # Los cortes salen de UMBRAL_ESTABLE/UMBRAL_ALERTA, que se recalibran
+        # cuando cambia la composición de la canasta (#155): el test se apoya en
+        # las constantes y no en los números de un momento dado.
+        assert sems["01"].nivel == ROJO  # 16 %
+        assert sems["04"].nivel == ROJO  # 10 %
+        assert sems["15"].variacion == pytest.approx(4.0)
+        assert sems["15"].nivel == clasificar(4.0)
 
     def test_cubre_los_departamentos_con_pesos(self):
         sems = semaforo_por_departamento(_PRECIOS, _PESOS, mes_actual="2026-09")

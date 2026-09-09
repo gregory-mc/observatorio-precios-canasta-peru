@@ -18,16 +18,21 @@ from observatorio.validacion.canasta_vs_ipc import construir_indice
 # Umbrales del semáforo
 # --------------------------------------------------------------------------- #
 # Calibrados sobre la distribución real de |variación mensual| del índice de
-# canasta de Lima (sisap_minorista, 27 variaciones entre 2024-01 y 2026-09):
-# mediana 3.1 %, p80 ≈ 7.5 %. Elegir 2 % / 5 % "a ojo" habría pintado de rojo uno
-# de cada tres meses en una canasta de frescos, que se mueve así por naturaleza
-# (ver docs/validacion_canasta_vs_ipc.md: volatilidad RMS ±6 %), y un semáforo
-# que está siempre en rojo no informa nada.
+# canasta de Lima (sisap_minorista, 26 variaciones entre meses consecutivos):
+# mediana 1.36 %, p80 3.71 %. Los cortes son la mediana y el p80 redondeados, así
+# que verde = "mes típico" (la mitad de los meses) y rojo = el quintil más
+# extremo. No son números elegidos a gusto.
+#
+# **Recalibrados al ampliar la canasta de 6 a 13 productos (#155).** Con 6
+# frescos la mediana era 3.1 % y el p80 7.5 %; al sumar arroz, aceite, azúcar,
+# leche y carnes la canasta se volvió mucho menos volátil —los frescos dejaron de
+# dominarla— y los umbrales viejos habrían dejado el semáforo casi siempre en
+# verde, que informa tan poco como si estuviera siempre en rojo.
 #
 # Es direccional a propósito: al consumidor una BAJA fuerte no le es una alarma.
 # Verde cubre "estable o bajando"; el número con signo se muestra igual.
-UMBRAL_ESTABLE = 3.0  # < 3 % de suba: mes típico (la mitad de los meses)
-UMBRAL_ALERTA = 7.5  # ≥ 7.5 % de suba: el quintil más extremo
+UMBRAL_ESTABLE = 1.5  # < 1.5 % de suba: mes típico (la mitad de los meses)
+UMBRAL_ALERTA = 4.0  # ≥ 4 % de suba: el quintil más extremo
 
 VERDE, AMBAR, ROJO, SIN_DATO = "verde", "ambar", "rojo", "sin_dato"
 

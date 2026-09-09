@@ -26,6 +26,13 @@ _NOMBRES = {
     "cebolla": "Cebolla",
     "tomate": "Tomate",
     "limon": "Limón",
+    "arroz": "Arroz",
+    "carne_res": "Carne de res",
+    "pescado": "Pescado",
+    "leche": "Leche",
+    "azucar": "Azúcar",
+    "aceite": "Aceite",
+    "menestras": "Menestras",
 }
 
 

@@ -35,6 +35,13 @@ _NOMBRES = {
     "cebolla": "Cebolla",
     "tomate": "Tomate",
     "limon": "Limón",
+    "arroz": "Arroz",
+    "carne_res": "Carne de res",
+    "pescado": "Pescado",
+    "leche": "Leche",
+    "azucar": "Azúcar",
+    "aceite": "Aceite",
+    "menestras": "Menestras",
 }
 
 
@@ -64,7 +71,7 @@ def _tarjeta_semaforo(sem) -> None:
 def render() -> None:
     st.title("🥔 ¿Se encareció la comida este mes?")
     st.caption(
-        "Seguimos el precio de seis alimentos frescos y los combinamos según lo "
+        "Seguimos el precio de trece alimentos básicos y los combinamos según lo "
         "que realmente se consume en cada departamento, para responder una sola "
         "pregunta: comprar lo mismo que el mes pasado, ¿cuesta más o menos?"
     )
@@ -139,7 +146,7 @@ rojo y no serviría de nada.
             st.warning(f"**{nombres[cod_dep]}.** {ambito.nota}")
         st.markdown(f"**Qué se come en {nombres[cod_dep]}**")
         st.caption(
-            "De cada S/ 100 gastados en estos seis alimentos, cuánto va a cada "
+            "De cada S/ 100 gastados en estos trece alimentos, cuánto va a cada "
             f"uno. Sale de la encuesta de hogares del INEI ({anio_enaho})."
         )
         st.dataframe(
@@ -178,7 +185,7 @@ rojo y no serviría de nada.
     with st.expander("De dónde salen estos seis productos y estos rangos"):
         st.markdown(
             """
-**Por qué seis.** Son los alimentos que cumplen dos condiciones a la vez: la
+**Por qué estos trece.** Son los alimentos que cumplen dos condiciones a la vez: la
 encuesta de hogares del INEI permite saber cuánto pesa cada uno en el gasto de
 **cada departamento**, y la fuente oficial de precios los publica **todos los
 días**. Sin lo primero no se puede ponderar por departamento; sin lo segundo no

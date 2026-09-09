@@ -55,12 +55,27 @@ log = logging.getLogger("canasta_vs_ipc")
 # presentaciones que matcheen. Los patrones evitan falsos positivos conocidos
 # ('Papa %' con espacio excluye "Papaya"; 'Carne de pollo%' excluye otras carnes).
 MAPEO_PRECIO_MVP: dict[str, tuple[str, ...]] = {
+    # --- Los 6 originales -------------------------------------------------
     "papa": ("Papa %",),
     "pollo": ("Carne de pollo%",),
     "huevo": ("Huevos%",),
     "cebolla": ("Cebolla%",),
     "tomate": ("Tomate%",),
     "limon": ("Limon%", "Limón%"),
+    # --- Ampliación a 13 productos (#155) ---------------------------------
+    # Se promedian todas las presentaciones que matcheen (extra/superior/
+    # corriente, blanca/rubia, bistec/corte único…), igual que las variedades
+    # de papa. Los patrones evitan falsos positivos conocidos.
+    "arroz": ("Arroz %",),
+    "carne_res": ("Carne de vacuno%", "Carne de porcino%", "Carne de cerdo%"),
+    "pescado": ("Pescado %",),
+    "leche": ("Leche %",),
+    "azucar": ("Azucar %", "Azúcar %"),
+    "aceite": ("Aceite %",),
+    # Solo las menestras SECAS, que es lo que pesa el grupo 31 de la ENAHO.
+    # Quedan fuera a propósito "Arveja verde …" y "Frijol verde canario", que
+    # son legumbres frescas y cotizan como hortaliza.
+    "menestras": ("Lenteja", "Frijol canario", "Frijol castilla", "Garbanzo", "Pallar"),
 }
 
 # Umbral de suficiencia para los estadísticos descriptivos del contraste con IPC.
@@ -87,6 +102,18 @@ RANGOS_PLAUSIBLES_SOLKG: dict[str, tuple[float, float]] = {
     "pollo": (4.0, 22.0),
     "tomate": (1.0, 18.0),
     "limon": (1.0, 30.0),
+    # Ampliación (#155). Calibrados sobre el promedio observado en SISAP
+    # minorista 2024–2026, con margen: arroz 3.6–4.6, carne 20–36, pescado
+    # 8.7–9.9, leche 4.0, azúcar 3.5–4.1, aceite 10.0, menestras 6.9–10.0.
+    # Los rangos son anchos hacia arriba porque estos productos tienen
+    # presentaciones de precio muy distinto dentro del mismo slug.
+    "arroz": (1.5, 12.0),
+    "carne_res": (10.0, 60.0),
+    "pescado": (3.0, 35.0),
+    "leche": (1.5, 15.0),
+    "azucar": (1.5, 10.0),
+    "aceite": (4.0, 30.0),
+    "menestras": (2.5, 25.0),
 }
 # Fallback para un slug sin rango propio: amplio, solo atrapa errores de unidad.
 RANGO_PLAUSIBLE_DEFAULT = (0.1, 100.0)
@@ -387,7 +414,7 @@ def _reporte(
     # --- Contexto descriptivo: contraste con el IPC (NO es criterio) -------- #
     print("\n--- CONTEXTO: contraste con el IPC oficial (descriptivo, NO valida) ---")
     print(
-        "   Nota: nuestra canasta son 6 frescos muy volátiles; el IPC agregado casi\n"
+        "   Nota: nuestra canasta son 13 alimentos basicos"
         "   no se mueve. Que diverjan es esperable y NO indica un defecto de método\n"
         "   (ver docs/validacion_canasta_vs_ipc.md)."
     )
