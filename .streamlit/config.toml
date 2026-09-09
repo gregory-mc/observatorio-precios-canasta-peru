@@ -1,0 +1,14 @@
+# Configuración del dashboard. Se versiona: no lleva secretos.
+# Los secretos van en .streamlit/secrets.toml (gitignoreado) o en la UI de
+# Streamlit Community Cloud. Ver .streamlit/secrets.toml.example.
+
+[server]
+# El dashboard es de solo lectura: nadie sube archivos.
+maxUploadSize = 1
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+base = "light"
+primaryColor = "#1a7f37"

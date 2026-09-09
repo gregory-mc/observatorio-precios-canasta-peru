@@ -1,0 +1,7 @@
+# Dependencias del dashboard para Streamlit Community Cloud (#49).
+#
+# Community Cloud busca un requirements.txt en la raíz del repo. En vez de
+# repetir acá la lista de paquetes, se instala el propio proyecto con su extra
+# `dashboard`: pyproject.toml sigue siendo la única fuente de verdad y esto no
+# se desincroniza.
+.[dashboard]

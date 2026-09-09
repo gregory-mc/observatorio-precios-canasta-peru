@@ -188,3 +188,100 @@ banda calculada sobre un conjunto de productos distinto.
 
 Vale unificarlas cuando se toque esa zona; no es urgente mientras el catálogo no
 cambie.
+
+---
+
+## 7. Deploy en Streamlit Community Cloud (#49)
+
+### Lo que el repo aporta
+
+| Archivo | Para qué |
+|---|---|
+| `pyproject.toml` → `[tool.poetry]` | **Es el que Cloud usa de verdad**: en cuanto ve un pyproject.toml instala con Poetry e ignora el requirements.txt (ver abajo) |
+| `requirements.txt` | Respaldo, por si el instalador cambia de criterio. Instala `.[dashboard]` |
+| `.streamlit/config.toml` | Tema y ajustes. Se versiona: no lleva secretos |
+| `.streamlit/secrets.toml.example` | Plantilla. El `secrets.toml` real está gitignoreado |
+| `streamlit_app.py` | Puente en la raíz: es el nombre que Community Cloud propone por defecto en "Main file path" |
+
+Dos entrypoints equivalentes:
+
+```bash
+streamlit run streamlit_app.py                 # el default del formulario de Cloud
+streamlit run observatorio/dashboard/app.py    # directo al paquete
+```
+
+El puente existe porque el formulario de deploy trae `streamlit_app.py`
+precargado, y dejarlo así fallaba con *"This file does not exist"*: el dashboard
+vive dentro del paquete, no en la raíz. Con el puente, cualquiera de los dos
+valores funciona.
+
+### El instalador de Cloud es Poetry, no pip
+
+Community Cloud instala con **Poetry** en cuanto encuentra un `pyproject.toml`, y
+el `requirements.txt` de la raíz queda ignorado. Poetry no resuelve solo dos
+cosas de este proyecto, y el primer deploy falló por las dos a la vez:
+
+1. **Busca un paquete con el nombre del proyecto** (`observatorio_precios`) y el
+   nuestro se llama `observatorio` → `No file/folder found for package
+   observatorio-precios`, y el build muere ahí.
+2. **No entiende `[project.optional-dependencies]`** sin `--extras`, y Cloud no
+   lo pasa: el extra `dashboard` se salteaba entero. En el log se ve como
+   `Installing streamlit (…): Skipped for the following reason: Not required`.
+   O sea que ni resolviendo el punto 1 habría arrancado la app.
+
+Se resuelve con un bloque `[tool.poetry]` que declara dónde está el paquete y un
+**grupo** `dashboard` — los grupos, a diferencia de los extras, se instalan por
+defecto. `pip` y `hatchling` ignoran `[tool.poetry]`, así que el desarrollo local
+y el CI no se enteran.
+
+Efecto lateral bueno: el grupo instala **solo** lo que el dashboard necesita.
+Prophet y FastAPI quedan afuera (`Not required`), y eso importa porque Prophet
+baja cmdstan y haría el build lento y frágil.
+
+> El grupo duplica los pines de `streamlit` y `plotly` que ya están en el extra.
+> Es el precio de que el instalador de Cloud no lea extras: si se cambian las
+> versiones en `[project.optional-dependencies]`, hay que cambiarlas también en
+> el grupo.
+
+### La credencial
+
+`datos.url_conexion()` la busca en dos lugares, en este orden:
+
+1. `SUPABASE_DB_URL` en el entorno o en `.env` — el camino local.
+2. `st.secrets["SUPABASE_DB_URL"]` — el camino de Cloud, donde los secretos se
+   pegan en Settings → Secrets.
+
+Se leen los dos en vez de confiar en que Streamlit espeje los secretos a
+variables de entorno, para no depender de ese detalle de implementación.
+Verificado: la app conecta con **solo** `st.secrets`, sin `.env` ni variable de
+entorno a la vista.
+
+> ⚠️ **Se despliega con la misma credencial que la carga** (`SUPABASE_DB_URL`),
+> que tiene permisos de escritura — decisión tomada a propósito para no
+> multiplicar secretos. Vale saber qué implica: la credencial **no** queda
+> expuesta al visitante (vive del lado del servidor), y todo el SQL del
+> dashboard es SELECT parametrizado, así que no hay un camino de escritura hoy.
+> Lo que se pierde es la segunda línea de defensa: si mañana alguien agrega una
+> consulta con interpolación, correría con permisos de escritura sobre `gold` y
+> `bronze`. Un rol `SELECT`-only lo cerraría; es la misma deuda que el review de
+> #135 anotó para la API (#47/#44).
+
+### Público vs. restringido
+
+Community Cloud ofrece tres mecanismos distintos, y conviene no confundirlos:
+
+| Mecanismo | Cómo funciona | Cuándo sirve |
+|---|---|---|
+| **Público** | Cualquiera con la URL entra, sin login. Indexable | El objetivo final del PLAN: dashboard público |
+| **Allowlist de la plataforma** | Se listan emails; el visitante entra con esa cuenta. Cero código | El soft launch: #42 pide 3 usuarios externos, #53 pide 5–10 beta |
+| **`st.login()` (OIDC)** | Auth real contra un proveedor de identidad | Si alguna vez hay datos por usuario |
+
+Hay una cuarta variante —una contraseña compartida dentro de la app con
+`st.text_input(type="password")`— que no recomendamos: secreto único, sin
+cuentas ni rastro de quién entró, y hay que escribir y mantener el código.
+
+**Que la app sea pública no hace público el repo.** El repositorio sigue privado;
+lo único que se expone es la página renderizada.
+
+> El tier gratuito limita las apps desplegadas desde un **repo privado** (este lo
+> es). Conviene confirmar el límite vigente al conectar la cuenta.
