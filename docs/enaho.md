@@ -103,7 +103,53 @@ Cada hogar de la muestra representa a muchos de la población. **Siempre** ponde
 
 ---
 
-## Códigos ENAHO de los productos del MVP
+## Códigos ENAHO de los productos de la canasta
+
+> **El nombre del producto está en el propio archivo.** El módulo 601 trae
+> `p601x` = "Nombre del producto" (25 caracteres) junto al código `p601a`, así
+> que el mapeo grupo → producto **no depende de adivinar códigos ni de conseguir
+> el codebook**: se lee del dato. Los nombres de grupo de abajo son las etiquetas
+> reales del código agregado en la ENAHO 2023.
+
+### La canasta ampliada a 13 productos (#155)
+
+| Producto | Grupo | Etiqueta ENAHO del agregado | % del gasto en alimentos |
+|---|---|---|---|
+| pollo | `09` | CARNE DE POLLO Y OTRAS AVES | 10.9 % |
+| arroz | `03` | ARROZ (CORRIENTE Y SUPERIOR) | 5.6 % |
+| papa | `05` | PAPA (BLANCA Y OTRAS) | 4.3 % |
+| carne_res | `08` | CARNES DE RES Y OTRAS ROJAS | 4.2 % |
+| pescado | `20` | PESCADO FRESCO | 4.0 % |
+| leche | `04` | LECHE (EVAPORADA, FRESCA…) | 3.8 % |
+| huevo | `07` | HUEVO | 3.6 % |
+| azucar | `06` | AZUCAR (BLANCA Y RUBIA) | 2.5 % |
+| aceite | `23` | ACEITE (BOTELLA Y A GRANEL) | 2.4 % |
+| menestras | `31` | LENTEJA, ARVEJA, HABA, FRIJOL | 2.1 % |
+| cebolla | `32` | CEBOLLA (ROJA, BLANCA, ETC) | 1.5 % |
+| tomate | `33` | TOMATE (ITALIANO, ROJO) | 1.1 % |
+| limon | `38` | LIMON | 1.1 % |
+
+**Cobertura: 47.1 % del gasto en alimentos** (era 22.5 % con 6 productos).
+
+### Grupos que quedaron afuera, y por qué
+
+| Grupo | Etiqueta | % | Motivo |
+|---|---|---|---|
+| `01` | PAN FRANCES Y OTROS PANES | 5.0 % | sin serie diaria en SISAP |
+| `37` | OTRAS HORTALIZAS Y LEGUMBRES | 4.7 % | agregado heterogéneo, sin precio equivalente |
+| `41` | OTRAS FRUTAS | 4.3 % | ídem |
+| `47` | COMIDAS PREPARADAS | 3.5 % | no es un producto con precio de mercado |
+| `19` | FIDEOS | 2.3 % | **SISAP lo publica solo en mayorista** |
+| `24` | QUESO FRESCO | 2.1 % | sin serie diaria |
+| `16` | TRIGO, HARINA DE TRIGO | 2.0 % | **solo en mayorista** |
+
+Fideos y harina entran el día que SISAP los publique en minorista: la canasta se
+valoriza a precio minorista porque es el ámbito que cruza con los pesos ENAHO y
+con el IPC, y mezclar fuentes rompería la comparabilidad.
+
+---
+
+## Códigos ENAHO de los 6 productos originales del MVP
 
 **Hallazgo clave:** el código `p601a` tiene 4 dígitos donde los **2 primeros = grupo
 del producto**. Cada producto del MVP cae en un único grupo. Buscar por nombre da

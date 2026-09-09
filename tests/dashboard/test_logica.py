@@ -45,16 +45,18 @@ class TestMesAnterior:
 
 
 class TestClasificar:
-    @pytest.mark.parametrize("var", [-9.0, -0.5, 0.0, 2.9])
+    @pytest.mark.parametrize("var", [-9.0, -0.5, 0.0, UMBRAL_ESTABLE - 0.1])
     def test_estable_o_bajando_es_verde(self, var):
         # Direccional a propósito: una baja fuerte no es una alarma para el consumidor.
         assert clasificar(var) == VERDE
 
-    @pytest.mark.parametrize("var", [3.0, 5.0, 7.4])
+    @pytest.mark.parametrize(
+        "var", [UMBRAL_ESTABLE, (UMBRAL_ESTABLE + UMBRAL_ALERTA) / 2, UMBRAL_ALERTA - 0.1]
+    )
     def test_suba_moderada_es_ambar(self, var):
         assert clasificar(var) == AMBAR
 
-    @pytest.mark.parametrize("var", [7.5, 12.0])
+    @pytest.mark.parametrize("var", [UMBRAL_ALERTA, UMBRAL_ALERTA + 5])
     def test_alza_fuerte_es_roja(self, var):
         assert clasificar(var) == ROJO
 
@@ -67,6 +69,12 @@ class TestClasificar:
 
 
 class TestSemaforo:
+    def test_los_umbrales_conservan_su_significado_estadistico(self):
+        # Verde = mes típico, rojo = quintil extremo. Si alguien mueve los
+        # umbrales sin recalibrar, esto no lo detecta — pero sí detecta que se
+        # inviertan o se vuelvan absurdos.
+        assert 0 < UMBRAL_ESTABLE < UMBRAL_ALERTA < 20
+
     def test_compara_el_ultimo_mes_cerrado(self):
         idx = _indice(
             {

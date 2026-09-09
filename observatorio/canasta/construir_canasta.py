@@ -41,6 +41,7 @@ from observatorio.canasta.dim_departamento import (
 )
 from observatorio.canasta.productos import (
     MVP_GRUPOS,
+    PRODUCTOS_CANASTA,
     PRODUCTOS_MVP,
     mapear_producto,
 )
@@ -309,7 +310,11 @@ def ejecutar(anio: int, ruta_dta: str, *, dry_run: bool, salida: str | None) -> 
     log.info("   %d filas crudas", len(df_601))
 
     df_canasta = construir_pesos(df_601, anio)
-    log.info("🧮 Canasta: %d filas (≤ 25 deptos × 6 productos)", len(df_canasta))
+    log.info(
+        "🧮 Canasta: %d filas (≤ 25 deptos × %d productos)",
+        len(df_canasta),
+        len(PRODUCTOS_CANASTA),
+    )
 
     reporte = validar_o_error(df_canasta, SUITE_CANASTA)  # lanza si hay errores
     for adv in reporte.advertencias:

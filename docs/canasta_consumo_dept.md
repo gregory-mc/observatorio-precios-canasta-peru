@@ -212,12 +212,27 @@ Implementado en `observatorio/canasta/` (PR de #19):
   **suite de calidad** `SUITE_CANASTA` (motor de #18): Σ pesos = 1.0, dominios, clave única,
   rangos; n_muestra<30 y precio implícito fuera de rango como **advertencias**.
 
-### Decisión tomada: doble conteo `XX00` vs `XX0n`
-Se sigue el supuesto del §4.1 (cada fila del módulo es una línea de compra distinta, así
-que sumar todos los códigos no-excluidos del grupo **no** duplica) → se suman tanto el
-agregado `XX00` como las presentaciones `XX0n`. La verificación empírica de co-ocurrencia
-(un hogar reportando el mismo producto bajo `XX00` y `XX0n` en el mismo periodo) queda
-pendiente de correr contra los microdatos reales; si apareciera, preferir el código específico.
+### Doble conteo `XX00` vs `XX0n` — ✅ VERIFICADO Y CORREGIDO (2026-09-09, #155)
+
+**El supuesto era falso.** Se corrió la verificación de co-ocurrencia contra la ENAHO
+2023: en **22,242 de 22,242 hogares (100 %)** que reportan arroz, la fila `XX00` es
+exactamente igual a la suma de las presentaciones. Un hogar tiene a la vez:
+
+```
+0300  ARROZ (CORRIENTE Y SUPERIOR)   S/ 220.03   60 kg
+0304  Arroz Extra a Granel           S/ 220.03   60 kg   <- la misma compra
+```
+
+Sumar los dos duplicaba el gasto y la cantidad de **cada** grupo. Se aplicó la salida que
+este mismo documento preveía: **usar solo el código específico** y descartar el agregado.
+
+Dos consecuencias de haberlo tenido mal:
+
+1. `gasto_*_anual` y `cantidad_kg_anual` estaban **al doble**. `peso_canasta` **no** se
+   veía afectado: se normaliza dentro de la canasta y el factor 2 era uniforme por grupo,
+   así que el semáforo y el veredicto de solidez de #20/#102 seguían siendo correctos.
+2. **Las exclusiones de procesados no hacían nada.** Excluir `0507` (papa seca) de las
+   presentaciones no la sacaba, porque `0500` ya la contenía. Recién ahora funcionan.
 
 ### Genuinamente pendiente (no es código)
 - Conseguir el **código INEI** de la ENAHO más reciente (2024/2025) para recargar con

@@ -86,13 +86,25 @@ class TestEvaluarSolidez:
         assert sol["checks"]["precios_plausibles"]["ok"]
         assert sol["veredicto"] == "CANASTA SÓLIDA"
 
-    def test_cada_producto_mvp_tiene_rango_propio(self):
-        # los 6 slugs del MVP deben tener un rango calibrado (no caer al fallback).
-        assert set(RANGOS_PLAUSIBLES_SOLKG) == {
-            "papa", "cebolla", "huevo", "pollo", "tomate", "limon"
-        }
+    def test_cada_producto_de_la_canasta_tiene_rango_propio(self):
+        # Todo producto que se cotiza necesita un rango calibrado; si cae al
+        # fallback (0.1–100) el chequeo de plausibilidad deja de atrapar errores
+        # de unidad, que es justo para lo que existe.
+        from observatorio.validacion.canasta_vs_ipc import MAPEO_PRECIO_MVP
+
+        assert set(RANGOS_PLAUSIBLES_SOLKG) == set(MAPEO_PRECIO_MVP)
         for lo, hi in RANGOS_PLAUSIBLES_SOLKG.values():
             assert 0 < lo < hi
+
+    def test_los_dos_lados_de_la_canasta_coinciden(self):
+        # El lado ENAHO (pesos, `productos.py`) y el lado precios
+        # (`MAPEO_PRECIO_MVP`) tienen que cubrir los MISMOS productos. Agregar
+        # uno a un solo lado deja un peso sin precio —que se renormaliza en
+        # silencio— o un precio sin peso, que simplemente se ignora.
+        from observatorio.canasta.productos import CANASTA_GRUPOS
+        from observatorio.validacion.canasta_vs_ipc import MAPEO_PRECIO_MVP
+
+        assert set(CANASTA_GRUPOS) == set(MAPEO_PRECIO_MVP)
 
     def test_hueco_es_aviso_no_falla(self):
         # salta de enero a marzo (falta febrero): continuidad falla pero sigue SÓLIDA.

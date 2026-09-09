@@ -21,6 +21,13 @@ _NOMBRES = {
     "cebolla": "Cebolla",
     "tomate": "Tomate",
     "limon": "Limón",
+    "arroz": "Arroz",
+    "carne_res": "Carne de res",
+    "pescado": "Pescado",
+    "leche": "Leche",
+    "azucar": "Azúcar",
+    "aceite": "Aceite",
+    "menestras": "Menestras",
 }
 
 _PESO = "Qué se consume en cada departamento"
@@ -107,7 +114,7 @@ def render() -> None:
         etiqueta = f"% de la canasta que es {_NOMBRES.get(slug, slug)}"
         con_signo, escala = False, "Blues"
         st.caption(
-            f"De cada S/ 100 que un hogar gasta en estos seis alimentos, cuánto "
+            f"De cada S/ 100 que un hogar gasta en estos trece alimentos, cuánto "
             f"se va en **{_NOMBRES.get(slug, slug)}**. Sale de la encuesta de "
             "hogares del INEI."
         )
