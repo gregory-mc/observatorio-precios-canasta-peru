@@ -200,8 +200,19 @@ cambie.
 | `requirements.txt` | Community Cloud lo busca en la raíz. Instala `.[dashboard]`, así que **pyproject sigue siendo la única fuente de verdad** de las dependencias |
 | `.streamlit/config.toml` | Tema y ajustes. Se versiona: no lleva secretos |
 | `.streamlit/secrets.toml.example` | Plantilla. El `secrets.toml` real está gitignoreado |
+| `streamlit_app.py` | Puente en la raíz: es el nombre que Community Cloud propone por defecto en "Main file path" |
 
-Entrypoint: `observatorio/dashboard/app.py`.
+Dos entrypoints equivalentes:
+
+```bash
+streamlit run streamlit_app.py                 # el default del formulario de Cloud
+streamlit run observatorio/dashboard/app.py    # directo al paquete
+```
+
+El puente existe porque el formulario de deploy trae `streamlit_app.py`
+precargado, y dejarlo así fallaba con *"This file does not exist"*: el dashboard
+vive dentro del paquete, no en la raíz. Con el puente, cualquiera de los dos
+valores funciona.
 
 ### La credencial
 
