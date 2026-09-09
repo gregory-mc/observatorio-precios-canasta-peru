@@ -33,10 +33,37 @@ def _patrones_slug() -> list[str]:
     return [pat for patrones in MAPEO_PRECIO_MVP.values() for pat in patrones]
 
 
-def hay_conexion() -> bool:
-    """¿Está configurado `SUPABASE_DB_URL`? Permite un mensaje claro y no un stack."""
+def url_conexion() -> str | None:
+    """Connection string de Supabase, de donde sea que esté configurada.
+
+    Dos entornos, dos mecanismos:
+
+    - **Local**: `SUPABASE_DB_URL` en el entorno o en `.env` (mismo secret que
+      usa la carga).
+    - **Streamlit Community Cloud**: `st.secrets`, que es donde se pegan los
+      secrets en la UI del deploy.
+
+    Se leen los dos en vez de confiar en que Streamlit espeje los secrets a
+    variables de entorno, para que la app no dependa de ese detalle.
+    """
     load_dotenv()
-    return bool(os.getenv("SUPABASE_DB_URL"))
+    desde_entorno = os.getenv("SUPABASE_DB_URL")
+    if desde_entorno:
+        return desde_entorno
+    try:
+        return st.secrets["SUPABASE_DB_URL"]
+    except Exception:  # noqa: BLE001 — sin secrets.toml, st.secrets levanta
+        return None
+
+
+def hay_conexion() -> bool:
+    """¿Hay credencial configurada? Permite un mensaje claro y no un stack."""
+    return bool(url_conexion())
+
+
+def _conectar(**kwargs):
+    """`conectar` con la URL ya resuelta (entorno o st.secrets)."""
+    return conectar(url_conexion(), **kwargs)
 
 
 def _filtro_ambito(clave: str) -> tuple[str, list]:
@@ -55,9 +82,8 @@ def precios_mensuales(fuente: str, ambito: str) -> dict[str, dict[str, float]]:
     `ambito` es un `cod_departamento`, `'nacional'` (filas sin departamento, como
     marketplace) o `'todas'` (sin filtrar: los precios que la fuente tenga).
     """
-    load_dotenv()
     filtro, extra = _filtro_ambito(ambito)
-    with conectar() as conn, conn.cursor() as cur:
+    with _conectar() as conn, conn.cursor() as cur:
         cur.execute(
             f"""
             with etiquetado as (
@@ -83,8 +109,7 @@ def precios_mensuales(fuente: str, ambito: str) -> dict[str, dict[str, float]]:
 @st.cache_data(ttl=_TTL)
 def pesos_canasta(cod_departamento: str) -> tuple[dict[str, float], int | None]:
     """({slug → peso}, año ENAHO) del departamento, para el año más reciente."""
-    load_dotenv()
-    with conectar() as conn, conn.cursor() as cur:
+    with _conectar() as conn, conn.cursor() as cur:
         cur.execute(
             """
             select producto, peso_canasta, anio_enaho
@@ -103,8 +128,7 @@ def pesos_canasta(cod_departamento: str) -> tuple[dict[str, float], int | None]:
 @st.cache_data(ttl=_TTL)
 def departamentos() -> list[tuple[str, str]]:
     """[(cod_departamento, nombre)] de los 25 departamentos, alfabético."""
-    load_dotenv()
-    with conectar() as conn, conn.cursor() as cur:
+    with _conectar() as conn, conn.cursor() as cur:
         cur.execute(
             """
             select distinct cod_departamento, departamento
@@ -118,8 +142,7 @@ def departamentos() -> list[tuple[str, str]]:
 @st.cache_data(ttl=_TTL)
 def departamentos_con_precio_propio(fuente: str) -> set[str]:
     """Departamentos con precios propios en esa fuente (hoy: solo Lima en SISAP)."""
-    load_dotenv()
-    with conectar() as conn, conn.cursor() as cur:
+    with _conectar() as conn, conn.cursor() as cur:
         cur.execute(
             """
             select distinct cod_departamento
@@ -134,9 +157,8 @@ def departamentos_con_precio_propio(fuente: str) -> set[str]:
 @st.cache_data(ttl=_TTL)
 def precios_recientes(fuente: str, ambito: str) -> list[tuple[str, float, str]]:
     """[(slug, último precio S//kg, fecha)] por producto del MVP."""
-    load_dotenv()
     filtro, extra = _filtro_ambito(ambito)
-    with conectar() as conn, conn.cursor() as cur:
+    with _conectar() as conn, conn.cursor() as cur:
         cur.execute(
             f"""
             with etiquetado as (
@@ -160,8 +182,7 @@ def precios_recientes(fuente: str, ambito: str) -> list[tuple[str, float, str]]:
 @st.cache_data(ttl=_TTL)
 def tiene_precios_nacionales(fuente: str) -> bool:
     """¿La fuente guarda filas sin departamento (cobertura nacional)?"""
-    load_dotenv()
-    with conectar() as conn, conn.cursor() as cur:
+    with _conectar() as conn, conn.cursor() as cur:
         cur.execute(
             "select exists (select 1 from gold.fct_precio_diario "
             "where fuente = %s and cod_departamento is null)",
@@ -182,8 +203,7 @@ def tiene_precios_nacionales(fuente: str) -> bool:
 @st.cache_data(ttl=_TTL)
 def productos_con_prediccion(fuente: str) -> list[str]:
     """Slugs con pronóstico en la última corrida de esa fuente."""
-    load_dotenv()
-    with conectar() as conn, conn.cursor() as cur:
+    with _conectar() as conn, conn.cursor() as cur:
         cur.execute(
             """
             select distinct producto from gold.fct_predicciones
@@ -199,11 +219,10 @@ def productos_con_prediccion(fuente: str) -> list[str]:
 @st.cache_data(ttl=_TTL, show_spinner="Cargando serie…")
 def serie_precio(fuente: str, ambito: str, slug: str, desde: str | None) -> list[tuple]:
     """[(fecha, precio promedio del día)] de un producto MVP."""
-    load_dotenv()
     filtro, extra = _filtro_ambito(ambito)
     corte = "and fecha_captura >= %s" if desde else ""
     corte_param = [desde] if desde else []
-    with conectar() as conn, conn.cursor() as cur:
+    with _conectar() as conn, conn.cursor() as cur:
         cur.execute(
             f"""
             with etiquetado as (
@@ -223,8 +242,7 @@ def serie_precio(fuente: str, ambito: str, slug: str, desde: str | None) -> list
 @st.cache_data(ttl=_TTL)
 def predicciones(fuente: str, slug: str) -> tuple[list[tuple], str | None, str | None]:
     """([(fecha, pred, inf, sup)], modelo, fecha_corrida) de la última corrida."""
-    load_dotenv()
-    with conectar() as conn, conn.cursor() as cur:
+    with _conectar() as conn, conn.cursor() as cur:
         cur.execute(
             """
             select fecha_pred, precio_pred, precio_pred_inf, precio_pred_sup,
@@ -246,10 +264,9 @@ def predicciones(fuente: str, slug: str) -> tuple[list[tuple], str | None, str |
 @st.cache_data(ttl=_TTL)
 def anomalias(fuente: str, slug: str, desde: str | None) -> list[tuple]:
     """[(fecha, precio observado, esperado, z)] detectadas en la última corrida."""
-    load_dotenv()
     corte = "and fecha >= %s" if desde else ""
     corte_param = [desde] if desde else []
-    with conectar() as conn, conn.cursor() as cur:
+    with _conectar() as conn, conn.cursor() as cur:
         cur.execute(
             f"""
             select fecha, precio_prom, esperado_prom, z_abs_max
@@ -285,8 +302,7 @@ GEOJSON_ATRIBUCION = (
 @st.cache_data(ttl=_TTL)
 def pesos_por_departamento() -> dict[str, dict[str, float]]:
     """{cod_departamento → {slug → peso}} del año ENAHO más reciente."""
-    load_dotenv()
-    with conectar() as conn, conn.cursor() as cur:
+    with _conectar() as conn, conn.cursor() as cur:
         cur.execute(
             """
             select cod_departamento, producto, peso_canasta

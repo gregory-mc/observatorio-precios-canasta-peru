@@ -188,3 +188,60 @@ banda calculada sobre un conjunto de productos distinto.
 
 Vale unificarlas cuando se toque esa zona; no es urgente mientras el catálogo no
 cambie.
+
+---
+
+## 7. Deploy en Streamlit Community Cloud (#49)
+
+### Lo que el repo aporta
+
+| Archivo | Para qué |
+|---|---|
+| `requirements.txt` | Community Cloud lo busca en la raíz. Instala `.[dashboard]`, así que **pyproject sigue siendo la única fuente de verdad** de las dependencias |
+| `.streamlit/config.toml` | Tema y ajustes. Se versiona: no lleva secretos |
+| `.streamlit/secrets.toml.example` | Plantilla. El `secrets.toml` real está gitignoreado |
+
+Entrypoint: `observatorio/dashboard/app.py`.
+
+### La credencial
+
+`datos.url_conexion()` la busca en dos lugares, en este orden:
+
+1. `SUPABASE_DB_URL` en el entorno o en `.env` — el camino local.
+2. `st.secrets["SUPABASE_DB_URL"]` — el camino de Cloud, donde los secretos se
+   pegan en Settings → Secrets.
+
+Se leen los dos en vez de confiar en que Streamlit espeje los secretos a
+variables de entorno, para no depender de ese detalle de implementación.
+Verificado: la app conecta con **solo** `st.secrets`, sin `.env` ni variable de
+entorno a la vista.
+
+> ⚠️ **Se despliega con la misma credencial que la carga** (`SUPABASE_DB_URL`),
+> que tiene permisos de escritura — decisión tomada a propósito para no
+> multiplicar secretos. Vale saber qué implica: la credencial **no** queda
+> expuesta al visitante (vive del lado del servidor), y todo el SQL del
+> dashboard es SELECT parametrizado, así que no hay un camino de escritura hoy.
+> Lo que se pierde es la segunda línea de defensa: si mañana alguien agrega una
+> consulta con interpolación, correría con permisos de escritura sobre `gold` y
+> `bronze`. Un rol `SELECT`-only lo cerraría; es la misma deuda que el review de
+> #135 anotó para la API (#47/#44).
+
+### Público vs. restringido
+
+Community Cloud ofrece tres mecanismos distintos, y conviene no confundirlos:
+
+| Mecanismo | Cómo funciona | Cuándo sirve |
+|---|---|---|
+| **Público** | Cualquiera con la URL entra, sin login. Indexable | El objetivo final del PLAN: dashboard público |
+| **Allowlist de la plataforma** | Se listan emails; el visitante entra con esa cuenta. Cero código | El soft launch: #42 pide 3 usuarios externos, #53 pide 5–10 beta |
+| **`st.login()` (OIDC)** | Auth real contra un proveedor de identidad | Si alguna vez hay datos por usuario |
+
+Hay una cuarta variante —una contraseña compartida dentro de la app con
+`st.text_input(type="password")`— que no recomendamos: secreto único, sin
+cuentas ni rastro de quién entró, y hay que escribir y mantener el código.
+
+**Que la app sea pública no hace público el repo.** El repositorio sigue privado;
+lo único que se expone es la página renderizada.
+
+> El tier gratuito limita las apps desplegadas desde un **repo privado** (este lo
+> es). Conviene confirmar el límite vigente al conectar la cuenta.
